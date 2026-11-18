@@ -122,6 +122,18 @@ pub fn setup_style(ctx: &egui::Context) {
         fonts.font_data.insert("segoe".into(), egui::FontData::from_owned(b).tweak(segoe_tweak()));
         fonts.families.entry(FontFamily::Proportional).or_default().insert(0, "segoe".into());
     }
+    // 日本語フォールバック（文字化け防止）
+    for (name, path) in [
+        ("yugoth", "C:\\Windows\\Fonts\\YuGothR.ttc"),
+        ("meiryo", "C:\\Windows\\Fonts\\meiryo.ttc"),
+        ("msgothic", "C:\\Windows\\Fonts\\msgothic.ttc"),
+    ] {
+        if let Ok(b) = std::fs::read(path) {
+            fonts.font_data.insert(name.into(), egui::FontData::from_owned(b));
+            fonts.families.entry(FontFamily::Proportional).or_default().push(name.into());
+            break;
+        }
+    }
     bold.extend(fonts.families.get(&FontFamily::Proportional).cloned().unwrap_or_default());
     fonts.families.insert(self::bold(), bold);
     ctx.set_fonts(fonts);
