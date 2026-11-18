@@ -64,9 +64,9 @@ impl SettingsApp {
         ui.add_space(16.0);
 
         for (page, label) in [
-            (Page::Home, "Inicio"),
-            (Page::Keys, "Atajos"),
-            (Page::General, "General"),
+            (Page::Home, "ホーム"),
+            (Page::Keys, "ショートカット"),
+            (Page::General, "一般"),
         ] {
             if nav_item(ui, label, self.page == page).clicked() {
                 self.page = page;
@@ -98,7 +98,7 @@ impl SettingsApp {
     }
 
     pub(super) fn home_page(&mut self, ui: &mut egui::Ui) {
-        page_title(ui, "Inicio", "クリップの録画方法。");
+        page_title(ui, "ホーム", "クリップの録画方法。");
         // Lo primero que se busca: con qué tecla se guarda un clip. Va arriba y se cambia ahí mismo.
         self.clip_key_hero(ui);
         ui.add_space(12.0);
@@ -117,7 +117,7 @@ impl SettingsApp {
         if let Some(Err(e)) = self.update_status.lock().unwrap().clone() {
             ui.add(egui::Label::new(RichText::new(format!("No se pudo actualizar: {e}")).size(12.0).color(DANGER)).wrap());
         }
-        let label = if busy { format!("Bajando la {v}…") } else { format!("Actualizar a {v}") };
+        let label = if busy { format!("Bajando la {v}…") } else { format!("{v} に更新") };
         let tip = format!("Tenés la {}.", update::current());
         let size = egui::vec2(ui.available_width(), 36.0);
         let r = ui.add_enabled_ui(!busy, |ui| icon_button(ui, Glyph::Download, &label, Kind::Secondary, size)).inner;
@@ -193,7 +193,7 @@ impl SettingsApp {
                 ui.with_layout(Layout::right_to_left(Align::Center), |ui| match self.update.clone() {
                     Some((v, _)) => {
                         let busy = self.update_busy();
-                        let label = if busy { "更新中…".to_string() } else { format!("Actualizar a {v}") };
+                        let label = if busy { "更新中…".to_string() } else { format!("{v} に更新") };
                         if ui.add_enabled_ui(!busy, |ui| button(ui, &label, Kind::Secondary)).inner.clicked() {
                             self.start_update();
                         }
@@ -374,7 +374,7 @@ impl SettingsApp {
             if self.cfg.mic_audio {
                 row(ui, "", LABEL_W, |ui| {
                     ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                        if button(ui, "更新", Kind::Secondary).on_hover_text("Buscar micrófonos conectados").clicked() {
+                        if button(ui, "更新", Kind::Secondary).on_hover_text("接続されているマイクを検索").clicked() {
                             self.mics = audio::capture_devices();
                         }
                         let current = if self.cfg.mic_device.is_empty() {

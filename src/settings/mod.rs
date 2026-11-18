@@ -308,11 +308,11 @@ impl eframe::App for SettingsApp {
                         match self.page {
                             Page::Home => self.home_page(ui),
                             Page::Keys => {
-                                page_title(ui, "Atajos", "いつでも（ゲーム中でも）使えるキー。");
+                                page_title(ui, "ショートカット", "いつでも（ゲーム中でも）使えるキー。");
                                 self.global_keys_section(ui);
                             }
                             Page::General => {
-                                page_title(ui, "General", "Windows起動時、サウンド、アプリのデータ。");
+                                page_title(ui, "一般", "Windows起動時、サウンド、アプリのデータ。");
                                 self.general_section(ui);
                                 self.about_section(ui);
                             }
