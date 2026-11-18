@@ -119,13 +119,8 @@ pub fn run(background: bool) {
         if first_run || !background {
             open_settings();
         }
-        // Versiones nuevas: una consulta como mucho por día, en segundo plano.
-        {
-            let h = hwnd.0 as isize;
-            update::watch(move || {
-                let _ = PostMessageW(HWND(h as *mut _), WM_UPDATE, WPARAM(0), LPARAM(0));
-            });
-        }
+        // 自動更新チェックは日本語版では標準で無効（信頼性確保のため）。
+        // 手動の「更新を確認」ボタンのみ有効。参照先は Kobutaemon/clippy-jp。
 
         let mut msg = MSG::default();
         while GetMessageW(&mut msg, None, 0, 0).as_bool() {
@@ -416,7 +411,7 @@ unsafe extern "system" fn wndproc(hwnd: HWND, msg: u32, wp: WPARAM, lp: LPARAM) 
         }
         WM_UPDATE => {
             if let Some((v, _)) = update::available() {
-                with_app(|a| a.balloon("Clippy の新しいバージョンがあります", &format!("La versión {v} está lista. Tocá acá para actualizar."), false));
+                with_app(|a| a.balloon("Clippy の新しいバージョンがあります", &format!("バージョン {v} が利用可能です。ここをタップして更新。"), false));
             }
             LRESULT(0)
         }

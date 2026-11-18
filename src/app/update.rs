@@ -18,7 +18,7 @@ use super::mode::{tray_running, Mode, Window};
 use crate::log::{app_dir, log};
 
 /// Repositorio público donde se publican las versiones (Releases).
-pub const REPO: &str = "santiremedi/clippy";
+pub const REPO: &str = "Kobutaemon/clippy-jp"; // 日本語版は自分のリポジトリを参照
 const HOUR: u64 = 60 * 60;
 const DAY: u64 = 24 * HOUR;
 
