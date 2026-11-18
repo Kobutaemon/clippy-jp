@@ -301,7 +301,7 @@ impl EditorApp {
             self.scan();
         }
         if !bad.is_empty() {
-            self.message = Some((false, format!("No se pudo abrir: {}", bad.join(", ")), None));
+            self.message = Some((false, format!("開けませんでした: {}", bad.join(", ")), None));
         }
     }
 
@@ -381,7 +381,7 @@ impl EditorApp {
     }
 
     fn import_dialog(&mut self) {
-        if let Some(files) = rfd::FileDialog::new().set_title("Importar videos").add_filter("Videos", &library::VIDEO_EXTS).pick_files() {
+        if let Some(files) = rfd::FileDialog::new().set_title("動画をインポート").add_filter("動画", &library::VIDEO_EXTS).pick_files() {
             self.import(files, false);
         }
     }
@@ -415,13 +415,13 @@ impl EditorApp {
         let max_h = (ctx.screen_rect().height() - 340.0).clamp(220.0, 560.0);
         let mut done = false;
         let subtitle = match tab {
-            HelpTab::Keys => "Tocá un atajo para cambiarlo. Los que funcionan mientras jugás están en la ventana de Clippy.",
-            HelpTab::Guide => "Lo que conviene saber para editar rápido.",
+            HelpTab::Keys => "ショートカットをクリックして変更します。ゲーム中に使えるものはClippyのウィンドウにあります。",
+            HelpTab::Guide => "素早く編集するために知っておくと便利なこと。",
         };
-        let x = modal(ctx, "keys", "Ajustes del editor", subtitle, 820.0, |ui| {
+        let x = modal(ctx, "keys", "エディタの設定", subtitle, 820.0, |ui| {
             modal_body(ui, |ui| {
                 ui.allocate_ui(egui::vec2(320.0, 32.0), |ui| {
-                    if seg(ui, &mut tab, &[(HelpTab::Keys, "Atajos"), (HelpTab::Guide, "Cómo se usa")]) {
+                    if seg(ui, &mut tab, &[(HelpTab::Keys, "ショートカット"), (HelpTab::Guide, "使い方")]) {
                         self.keys_editor.capturing = None;
                     }
                 });
@@ -432,12 +432,12 @@ impl EditorApp {
                 });
             });
             modal_footer(ui, |ui| {
-                if tab == HelpTab::Keys && button_sized(ui, "Restablecer atajos", Kind::Secondary, egui::vec2(0.0, 38.0)).clicked() {
+                if tab == HelpTab::Keys && button_sized(ui, "ショートカットをリセット", Kind::Secondary, egui::vec2(0.0, 38.0)).clicked() {
                     self.keys_editor.reset(&mut self.prefs.keys);
                     self.prefs.save();
                 }
                 ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                    if button_sized(ui, "Listo", Kind::Primary, egui::vec2(120.0, 38.0)).clicked() {
+                    if button_sized(ui, "完了", Kind::Primary, egui::vec2(120.0, 38.0)).clicked() {
                         done = true;
                     }
                 });
@@ -451,38 +451,38 @@ impl EditorApp {
         }
     }
 
-    /// "Cómo se usa": lo que no se descubre solo (arrastres, Alt, clic derecho), con los atajos de ahora.
+    /// "使い方": lo que no se descubre solo (arrastres, Alt, clic derecho), con los atajos de ahora.
     fn guide(&self, ui: &mut egui::Ui) {
         let k = |a: Act| shortcuts::short(&self.prefs.keys, a);
         let topics = [
             (
-                "Biblioteca",
-                "Un clic elige un video (con Ctrl se suman, con Shift se elige un tramo) y arrastrando elegís varios con un recuadro. Doble clic o el + lo suma a la línea de tiempo; también podés arrastrar videos del Explorador a la ventana. Con el clic derecho los movés a una carpeta o los mandás a la Papelera de reciclaje.".to_string(),
+                "ライブラリ",
+                "クリックで動画を選択（Ctrlで複数追加、Shiftで範囲選択）。ドラッグで矩形選択も可能。ダブルクリックまたは+でタイムラインに追加。エクスプローラーからドラッグもできます。右クリックでフォルダ移動やごみ箱への移動ができます。".to_string(),
             ),
             (
-                "Recortar y mover",
-                "Arrastrá los bordes de un clip para recortarlo y del medio para cambiarlo de lugar o de pista. Con Alt apretado, el borde o la esquina cambia solo la imagen o solo el sonido.".to_string(),
+                "トリミングと移動",
+                "クリップの端をドラッグしてトリミング、中央をドラッグして移動やトラック変更。Altを押しながらだと画像または音声だけを調整できます。".to_string(),
             ),
             (
-                "Fundidos",
-                "Arrastrá una esquina de arriba de un clip para que aparezca desde negro o se vaya a negro. Si toca a otro clip, se funden uno en el otro. Con el clic derecho sobre el fundido elegís su curva.".to_string(),
+                "フェード",
+                "クリップ上部の角をドラッグすると黒から出現/黒へフェード。他のクリップに接するとクロスフェード。フェードを右クリックでカーブを変更できます。".to_string(),
             ),
             (
-                "Imán",
-                format!("Prendido ({}), los clips de cada pista quedan pegados uno detrás del otro. Apagado, quedan donde los soltás y, si se superponen, se funden.", k(Act::Magnet)),
+                "マグネット",
+                format!("オン ({}) の場合、各トラックのクリップは連続して吸着。オフの場合、ドロップした位置に残り、重なるとフェードします。", k(Act::Magnet)),
             ),
             (
-                "Clic derecho en un clip",
-                "Dividir, duplicar, congelar el cuadro, cambiar la velocidad, girar, espejar o recortar la imagen, silenciar, separar el audio y eliminar.".to_string(),
+                "クリップを右クリック",
+                "分割, duplicar, congelar el cuadro, cambiar la velocidad, girar, espejar o recortar la imagen, silenciar, separar el audio y eliminar.".to_string(),
             ),
             (
-                "Velocidad, imagen y proporción",
-                "En el panel de la derecha cambiás la velocidad del clip y su imagen. Debajo de la vista previa elegís la proporción del video: horizontal, vertical para el celular o cuadrado. Si un clip no tiene esa forma, elegís si entra entero o llena el cuadro.".to_string(),
+                "速度・画像・アスペクト比",
+                "右側のパネルで速度と画像を変更。プレビュー下でアスペクト比（横・縦・正方形）を選択。形状が異なる場合は全体表示かフィットを選べます。".to_string(),
             ),
             (
-                "Congelar y marcadores",
+                "フリーズとマーカー",
                 format!(
-                    "{} deja quieto el cuadro del cursor 3 segundos (arrastrá su borde para que dure más o menos). {} pone un marcador: tocalo para ir ahí, arrastralo para moverlo o sacalo con el clic derecho. Con el imán, los bordes se enganchan en los marcadores.",
+                    "{} でカーソル位置のフレームを3秒フリーズ（端をドラッグで長さ調整）。{} でマーカーを追加。クリックで移動、ドラッグで位置変更、右クリックで削除。マグネットオン時は端がマーカーに吸着します。",
                     k(Act::Freeze),
                     k(Act::Marker)
                 ),
@@ -510,9 +510,9 @@ impl EditorApp {
         }
         let exporting = self.job.is_some();
         let (title, body) = if exporting {
-            ("Se está exportando el video", "Si cerrás ahora, se cancela la exportación.")
+            ("動画をエクスポート中", "今閉じるとエクスポートがキャンセルされます。")
         } else {
-            ("¿Cerrar sin exportar?", "Tenés cambios en la línea de tiempo que todavía no exportaste. Si cerrás, se pierden.")
+            ("エクスポートせずに閉じますか？", "タイムラインに未エクスポートの変更があります。閉じると失われます。")
         };
         let mut action = 0;
         let x = modal(ctx, "close", title, "", 480.0, |ui| {
@@ -520,14 +520,14 @@ impl EditorApp {
                 ui.add(egui::Label::new(RichText::new(body).color(MUTED)).wrap());
             });
             modal_footer(ui, |ui| {
-                if button_sized(ui, "Seguir editando", Kind::Secondary, egui::vec2(0.0, 38.0)).clicked() {
+                if button_sized(ui, "編集を続ける", Kind::Secondary, egui::vec2(0.0, 38.0)).clicked() {
                     action = 1;
                 }
                 ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                    if !exporting && button_sized(ui, "Exportar", Kind::Primary, egui::vec2(120.0, 38.0)).clicked() {
+                    if !exporting && button_sized(ui, "エクスポート", Kind::Primary, egui::vec2(120.0, 38.0)).clicked() {
                         action = 3;
                     }
-                    if button_sized(ui, "Cerrar sin guardar", Kind::Danger, egui::vec2(0.0, 38.0)).clicked() {
+                    if button_sized(ui, "保存せずに閉じる", Kind::Danger, egui::vec2(0.0, 38.0)).clicked() {
                         action = 2;
                     }
                 });
@@ -568,7 +568,7 @@ impl EditorApp {
             let p = ctx.layer_painter(egui::LayerId::new(egui::Order::Foreground, egui::Id::new("drop")));
             p.rect_filled(screen, 0.0, SCRIM.gamma_multiply(a));
             p.rect_stroke(screen.shrink(24.0), 16.0, Stroke::new(2.0_f32, WHITE.gamma_multiply(a)));
-            p.text(screen.center(), Align2::CENTER_CENTER, "Soltá los videos para agregarlos", FontId::proportional(24.0), WHITE.gamma_multiply(a));
+            p.text(screen.center(), Align2::CENTER_CENTER, "動画をドロップして追加", FontId::proportional(24.0), WHITE.gamma_multiply(a));
         }
     }
 }

@@ -77,7 +77,7 @@ pub const ALL: [Act; 24] = [
     Act::Shortcuts,
 ];
 
-pub const GROUPS: [&str; 4] = ["Reproducción", "Edición", "Vista", "Archivo"];
+pub const GROUPS: [&str; 4] = ["Reproducción", "編集", "Vista", "ファイル"];
 
 fn k(key: &str, ctrl: bool, shift: bool) -> Combo {
     Combo { key: key.into(), ctrl, shift, alt: false }
@@ -126,29 +126,29 @@ impl Act {
     pub fn label(self) -> &'static str {
         match self {
             Act::PlayPause => "Reproducir / pausar",
-            Act::PrevFrame => "Cuadro anterior",
-            Act::NextFrame => "Cuadro siguiente",
+            Act::PrevFrame => "前のフレーム",
+            Act::NextFrame => "次のフレーム",
             Act::Back => "Retroceder 1 segundo",
-            Act::Forward => "Avanzar 1 segundo",
+            Act::Forward => "1秒進む",
             Act::ToStart => "Ir al inicio",
             Act::ToEnd => "Ir al final",
-            Act::Split => "Dividir en el cursor",
-            Act::Duplicate => "Duplicar clip",
-            Act::Delete => "Eliminar clip",
-            Act::Freeze => "Congelar el cuadro del cursor",
+            Act::Split => "カーソル位置で分割",
+            Act::Duplicate => "クリップを複製",
+            Act::Delete => "クリップを削除",
+            Act::Freeze => "カーソル位置のフレームをフリーズ",
             Act::Marker => "Poner o sacar un marcador",
-            Act::MuteClip => "Silenciar o activar el sonido del clip",
+            Act::MuteClip => "ミュート o activar el sonido del clip",
             Act::Link => "Separar o unir el audio y el video",
-            Act::Magnet => "Imán: pegar los clips solos",
-            Act::Undo => "Deshacer",
+            Act::Magnet => "マグネット: pegar los clips solos",
+            Act::Undo => "元に戻す",
             Act::Redo => "Rehacer",
-            Act::ZoomIn => "Acercar línea de tiempo",
-            Act::ZoomOut => "Alejar línea de tiempo",
-            Act::ZoomFit => "Ver toda la línea de tiempo",
+            Act::ZoomIn => "タイムラインをズームイン",
+            Act::ZoomOut => "タイムラインをズームアウト",
+            Act::ZoomFit => "タイムライン全体を表示",
             Act::Fullscreen => "Pantalla completa",
-            Act::Import => "Importar videos",
-            Act::Export => "Exportar video",
-            Act::Shortcuts => "Ayuda y atajos",
+            Act::Import => "動画をインポート",
+            Act::Export => "動画をエクスポート",
+            Act::Shortcuts => "ヘルプとショートカット",
         }
     }
 
@@ -200,7 +200,7 @@ pub fn binding(keys: &Keys, a: Act) -> Combo {
     keys.get(a.id()).cloned().unwrap_or_else(|| a.default_combo())
 }
 
-/// Texto para mostrar una combinación ("Ctrl + D", "Espacio", "Sin asignar").
+/// Texto para mostrar una combinación ("Ctrl + D", "スペース", "Sin asignar").
 pub fn label(c: &Combo) -> String {
     if c.key.is_empty() {
         return "Sin asignar".into();
@@ -210,7 +210,7 @@ pub fn label(c: &Combo) -> String {
         "Right" => "→",
         "Up" => "↑",
         "Down" => "↓",
-        "Space" => "Espacio",
+        "Space" => "スペース",
         "Delete" => "Supr",
         "Backspace" => "Retroceso",
         "Home" => "Inicio",
@@ -320,9 +320,9 @@ impl Editor {
                     // Primero la tecla (a la derecha); el nombre usa lo que sobra y se corta si no entra.
                     ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
                         let capturing = this.capturing == Some(a);
-                        let text = if capturing { "Apretá una tecla…".to_string() } else { short(keys, a) };
+                        let text = if capturing { "キーを押してください…".to_string() } else { short(keys, a) };
                         let kind = if capturing { Kind::Selected } else { Kind::Secondary };
-                        if button_fit(ui, None, &text, kind, egui::vec2(150.0, 30.0)).on_hover_text("Clic para cambiar · Esc cancela").clicked() {
+                        if button_fit(ui, None, &text, kind, egui::vec2(150.0, 30.0)).on_hover_text("クリックして変更 · Escでキャンセル").clicked() {
                             this.capturing = if capturing { None } else { Some(a) };
                             this.note = None;
                         }

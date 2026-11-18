@@ -91,7 +91,7 @@ impl EditorApp {
         }
         self.pause();
         self.export_dlg = Some(ExportDialog {
-            name: format!("Clippy_edit_{}", file_stamp()),
+            name: format!("クリップpy_edit_{}", file_stamp()),
             dir: self.cfg.output_dir.clone(),
             height: self.prefs.export_height,
             fps: self.prefs.export_fps,
@@ -186,12 +186,12 @@ impl EditorApp {
         let plan = self.export_plan(&d);
         let max_h = (ctx.screen_rect().height() - 240.0).max(200.0);
         let mut action = 0;
-        let x = modal(ctx, "export", "Exportar video", "Elegí cómo querés guardar tu video.", 720.0, |ui| {
+        let x = modal(ctx, "export", "動画をエクスポート", "動画の保存方法を選択してください。", 720.0, |ui| {
             modal_body(ui, |ui| {
                 // Con la ventana baja, el cuerpo se desplaza y los botones de abajo siguen a la vista.
                 egui::ScrollArea::vertical().max_height(max_h).auto_shrink([false, true]).show(ui, |ui| {
-                    caption(ui, "Archivo");
-                    row(ui, "Nombre", 170.0, |ui| {
+                    caption(ui, "ファイル");
+                    row(ui, "名前", 170.0, |ui| {
                         ui.add(
                             egui::TextEdit::singleline(&mut d.name)
                                 .desired_width(ui.available_width() - 50.0)
@@ -200,10 +200,10 @@ impl EditorApp {
                         );
                         ui.label(RichText::new(".mp4").color(MUTED));
                     });
-                    row(ui, "Guardar en", 170.0, |ui| {
+                    row(ui, "保存先", 170.0, |ui| {
                         ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                            if button(ui, "Cambiar", Kind::Secondary).clicked() {
-                                if let Some(p) = rfd::FileDialog::new().set_title("Carpeta de destino").set_directory(&d.dir).pick_folder() {
+                            if button(ui, "変更", Kind::Secondary).clicked() {
+                                if let Some(p) = rfd::FileDialog::new().set_title("保存先フォルダ").set_directory(&d.dir).pick_folder() {
                                     d.dir = p;
                                 }
                             }
@@ -213,8 +213,8 @@ impl EditorApp {
                         });
                     });
                     ui.add_space(10.0);
-                    caption(ui, "Formato");
-                    let orig_res = format!("Original · {src_h}p");
+                    caption(ui, "形式");
+                    let orig_res = format!("オリジナル · {src_h}p");
                     let mut res_opts: Vec<(u32, String)> = vec![(0, orig_res)];
                     for h in [1440u32, 1080, 720] {
                         if h < src_h {
@@ -225,26 +225,26 @@ impl EditorApp {
                         let opts: Vec<(u32, &str)> = res_opts.iter().map(|(v, l)| (*v, l.as_str())).collect();
                         seg(ui, &mut d.height, &opts);
                     });
-                    let orig_fps = format!("Original · {src_fps}");
+                    let orig_fps = format!("オリジナル · {src_fps}");
                     let mut fps_opts: Vec<(u32, String)> = vec![(0, orig_fps)];
                     for f in [60u32, 30] {
                         if f < src_fps {
                             fps_opts.push((f, f.to_string()));
                         }
                     }
-                    row(ui, "Cuadros por segundo", 170.0, |ui| {
+                    row(ui, "フレームレート", 170.0, |ui| {
                         let opts: Vec<(u32, &str)> = fps_opts.iter().map(|(v, l)| (*v, l.as_str())).collect();
                         seg(ui, &mut d.fps, &opts);
                     });
-                    row(ui, "Calidad", 170.0, |ui| {
+                    row(ui, "画質", 170.0, |ui| {
                         seg(
                             ui,
                             &mut d.quality,
                             &[
                                 (Quality::Recommended, "Recomendada"),
-                                (Quality::High, "Alta"),
-                                (Quality::Medium, "Media"),
-                                (Quality::Low, "Baja"),
+                                (Quality::High, "高"),
+                                (Quality::Medium, "中"),
+                                (Quality::Low, "低"),
                                 (Quality::MaxSize, "Por tamaño"),
                             ],
                         );
@@ -276,7 +276,7 @@ impl EditorApp {
                                     format!("Se renderiza con la GPU{why}: tarda unos {}.", fmt_secs((p.seconds / 3.0).ceil().max(1.0) as u32))
                                 }
                             };
-                            ui.label(RichText::new(format!("Duración {} · {how}", fmt_time((p.seconds * 1e7) as i64))).size(12.5).color(MUTED));
+                            ui.label(RichText::new(format!("長さ {} · {how}", fmt_time((p.seconds * 1e7) as i64))).size(12.5).color(MUTED));
                             if p.low_quality {
                                 ui.label(
                                     RichText::new("Con ese tamaño la imagen se va a ver con poca calidad. Probá bajar la resolución o los cuadros por segundo.")
@@ -286,7 +286,7 @@ impl EditorApp {
                             }
                         }
                         None => {
-                            ui.label(RichText::new("No hay video para exportar: mostrá una pista de video o agregá un clip.").color(DANGER));
+                            ui.label(RichText::new("エクスポートする動画がありません。映像トラックを表示するか、クリップを追加してください。").color(DANGER));
                         }
                     });
                 });
@@ -299,11 +299,11 @@ impl EditorApp {
                 }
                 ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
                     let ok = plan.is_some() && !d.name.trim().is_empty();
-                    let r = ui.add_enabled_ui(ok, |ui| icon_button(ui, Glyph::Export, "Exportar", Kind::Primary, egui::vec2(130.0, 38.0))).inner;
+                    let r = ui.add_enabled_ui(ok, |ui| icon_button(ui, Glyph::Export, "エクスポート", Kind::Primary, egui::vec2(130.0, 38.0))).inner;
                     if r.clicked() {
                         action = 2;
                     }
-                    if button_sized(ui, "Cancelar", Kind::Secondary, egui::vec2(120.0, 38.0)).clicked() {
+                    if button_sized(ui, "キャンセル", Kind::Secondary, egui::vec2(120.0, 38.0)).clicked() {
                         action = 1;
                     }
                 });
@@ -373,14 +373,14 @@ impl EditorApp {
         match res {
             Some(Ok(mode)) => {
                 let name = job.out.file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_default();
-                self.message = Some((true, format!("Listo: {name} ({mode})"), Some(job.out.clone())));
+                self.message = Some((true, format!("完了: {name} ({mode})"), Some(job.out.clone())));
                 self.dirty = false;
                 self.job = None;
                 self.scan();
             }
             Some(Err(e)) => {
                 let canceled = job.progress.cancel.load(std::sync::atomic::Ordering::Relaxed);
-                let msg = if canceled { "Exportación cancelada.".to_string() } else { format!("No se pudo exportar: {e}") };
+                let msg = if canceled { "エクスポートがキャンセルされました。".to_string() } else { format!("エクスポートに失敗しました: {e}") };
                 self.message = Some((false, msg, None));
                 self.job = None;
             }

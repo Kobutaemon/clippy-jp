@@ -70,7 +70,7 @@ fn asset_card(ui: &mut egui::Ui, rect: Rect, a: &Asset, info: Option<&library::I
     match info.and_then(|i| i.cover.as_ref()) {
         Some(t) => shapes.push(Shape::image(t.id(), thumb, Rect::from_min_max(Pos2::ZERO, Pos2::new(1.0, 1.0)), Color32::WHITE)),
         None => {
-            let msg = if info.and_then(|i| i.error.as_ref()).is_some() { "No se puede leer" } else { "Cargando…" };
+            let msg = if info.and_then(|i| i.error.as_ref()).is_some() { "No se puede leer" } else { "読み込み中…" };
             shapes.push(ui.fonts(|f| Shape::text(f, thumb.center(), Align2::CENTER_CENTER, msg, FontId::proportional(12.0), MUTED)));
         }
     }
@@ -107,9 +107,9 @@ fn asset_card(ui: &mut egui::Ui, rect: Rect, a: &Asset, info: Option<&library::I
         let mut plus = vec![Shape::circle_filled(c, ADD_R, fill)];
         plus.extend(glyph(Glyph::Plus, c, 12.0, BLACK));
         paint_pressed(ui, c, press(ui, &r), PRESS_DEPTH_ICON, plus);
-        add = r.on_hover_cursor(CursorIcon::PointingHand).on_hover_text("Agregar a la línea de tiempo").clicked();
+        add = r.on_hover_cursor(CursorIcon::PointingHand).on_hover_text("タイムラインに追加").clicked();
     }
-    let resp = resp.on_hover_text(format!("{}\nDoble clic para agregarlo a la línea de tiempo", a.title));
+    let resp = resp.on_hover_text(format!("{}\nダブルクリックでタイムラインに追加", a.title));
     (resp, add)
 }
 
@@ -197,16 +197,16 @@ impl EditorApp {
                     ui.add(egui::Label::new(RichText::new(name).family(bold()).size(17.0).color(TEXT)).truncate());
                 }
                 None => {
-                    ui.label(RichText::new("Biblioteca").family(bold()).size(17.0).color(TEXT));
+                    ui.label(RichText::new("ライブラリ").family(bold()).size(17.0).color(TEXT));
                 }
             }
             ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                let tip = format!("Agregar videos de cualquier carpeta ({})", shortcuts::short(&self.prefs.keys, Act::Import));
-                if icon_button(ui, Glyph::Plus, "Importar", Kind::Secondary, Vec2::ZERO).on_hover_text(tip).clicked() {
+                let tip = format!("任意のフォルダから動画を追加 ({})", shortcuts::short(&self.prefs.keys, Act::Import));
+                if icon_button(ui, Glyph::Plus, "インポート", Kind::Secondary, Vec2::ZERO).on_hover_text(tip).clicked() {
                     self.import_dialog();
                 }
-                if self.browser.dir.is_none() && icon_only_button(ui, Glyph::NewFolder, Kind::Ghost, "Carpeta nueva").clicked() {
-                    todo.push(Do::Dialog(Dialog::Name { name: "Carpeta nueva".into(), files: Vec::new(), rename: None, error: None }));
+                if self.browser.dir.is_none() && icon_only_button(ui, Glyph::NewFolder, Kind::Ghost, "新しいフォルダ").clicked() {
+                    todo.push(Do::Dialog(Dialog::Name { name: "新しいフォルダ".into(), files: Vec::new(), rename: None, error: None }));
                 }
             });
         });
@@ -222,10 +222,10 @@ impl EditorApp {
                         let n = self.browser.sel.len();
                         ui.label(RichText::new(if n == 1 { "1 elegido".to_string() } else { format!("{} elegidos", fmt_count(n)) }).size(13.0).color(MUTED));
                         ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                            if icon_only_button(ui, Glyph::Trash, Kind::Ghost, "Eliminar (Supr)").clicked() {
+                            if icon_only_button(ui, Glyph::Trash, Kind::Ghost, "削除 (Delete)").clicked() {
                                 todo.push(Do::Dialog(Dialog::Delete(self.selected_assets())));
                             }
-                            if icon_button(ui, Glyph::Plus, "Agregar", Kind::Secondary, Vec2::ZERO).on_hover_text("Sumar a la línea de tiempo").clicked() {
+                            if icon_button(ui, Glyph::Plus, "追加", Kind::Secondary, Vec2::ZERO).on_hover_text("タイムラインに追加").clicked() {
                                 todo.push(Do::Add(self.selected_assets()));
                             }
                         });
@@ -237,11 +237,11 @@ impl EditorApp {
         if nf + self.assets.len() == 0 {
             ui.add_space(24.0);
             if self.browser.dir.is_some() {
-                ui.label(RichText::new("Esta carpeta está vacía.").color(TEXT));
-                ui.label(RichText::new("Para traer clips, elegilos en la biblioteca y usá «Mover a» con el clic derecho.").color(MUTED));
+                ui.label(RichText::new("このフォルダは空です。").color(TEXT));
+                ui.label(RichText::new("クリップを追加するには、ライブラリで選択して右クリックの「移動先」を使ってください。").color(MUTED));
             } else {
-                ui.label(RichText::new("No hay videos todavía.").color(TEXT));
-                ui.label(RichText::new("Guardá un clip mientras jugás, tocá Importar o arrastrá videos a la ventana.").color(MUTED));
+                ui.label(RichText::new("まだ動画がありません。").color(TEXT));
+                ui.label(RichText::new("プレイ中にクリップを保存するか、「インポート」を押すか、動画をウィンドウにドラッグしてください。").color(MUTED));
             }
         } else {
             self.library_grid(ui, &mut todo);
@@ -297,20 +297,20 @@ impl EditorApp {
                         todo.push(Do::Open(Some(f.path.clone())));
                     }
                     r.context_menu(|ui| {
-                        if ui.button("Abrir").clicked() {
+                        if ui.button("開く").clicked() {
                             todo.push(Do::Open(Some(f.path.clone())));
                             ui.close_menu();
                         }
-                        if ui.button("Cambiar el nombre…").clicked() {
+                        if ui.button("名前を変更…").clicked() {
                             todo.push(Do::Dialog(Dialog::Name { name: f.name.clone(), files: Vec::new(), rename: Some(f.path.clone()), error: None }));
                             ui.close_menu();
                         }
-                        if ui.button("Abrir en el Explorador").clicked() {
+                        if ui.button("エクスプローラーで開く").clicked() {
                             open_folder(&f.path);
                             ui.close_menu();
                         }
                         ui.separator();
-                        if ui.button(RichText::new("Eliminar carpeta…").color(DANGER)).clicked() {
+                        if ui.button(RichText::new("フォルダを削除…").color(DANGER)).clicked() {
                             todo.push(Do::Dialog(Dialog::DeleteFolder(f.path.clone())));
                             ui.close_menu();
                         }
@@ -354,18 +354,18 @@ impl EditorApp {
                     let paths: Vec<PathBuf> = self.assets.iter().filter(|x| b.sel.contains(&x.path)).map(|x| x.path.clone()).collect();
                     let n = paths.len();
                     let imported = self.assets.iter().filter(|x| b.sel.contains(&x.path) && x.imported).count();
-                    let label = if n == 1 { "Agregar a la línea de tiempo".to_string() } else { format!("Agregar {} a la línea de tiempo", count(n, "video", "videos")) };
+                    let label = if n == 1 { "タイムラインに追加".to_string() } else { format!("{} をタイムラインに追加", count(n, "video", "videos")) };
                     if ui.button(label).clicked() {
                         todo.push(Do::Add(paths.clone()));
                         ui.close_menu();
                     }
-                    if n == 1 && ui.button("Mostrar en el Explorador").clicked() {
+                    if n == 1 && ui.button("エクスプローラーで表示").clicked() {
                         todo.push(Do::Reveal(paths[0].clone()));
                         ui.close_menu();
                     }
                     if imported == 0 {
-                        ui.menu_button("Mover a", |ui| {
-                            if b.dir.is_some() && ui.button("Biblioteca").clicked() {
+                        ui.menu_button("移動先", |ui| {
+                            if b.dir.is_some() && ui.button("ライブラリ").clicked() {
                                 todo.push(Do::Move(paths.clone(), self.cfg.output_dir.clone()));
                                 ui.close_menu();
                             }
@@ -376,14 +376,14 @@ impl EditorApp {
                                 }
                             }
                             ui.separator();
-                            if ui.button("Carpeta nueva…").clicked() {
-                                todo.push(Do::Dialog(Dialog::Name { name: "Carpeta nueva".into(), files: paths.clone(), rename: None, error: None }));
+                            if ui.button("新しいフォルダ…").clicked() {
+                                todo.push(Do::Dialog(Dialog::Name { name: "新しいフォルダ".into(), files: paths.clone(), rename: None, error: None }));
                                 ui.close_menu();
                             }
                         });
                     }
                     ui.separator();
-                    let del = if imported == n { "Quitar de la biblioteca" } else { "Eliminar…" };
+                    let del = if imported == n { "Quitar de la biblioteca" } else { "削除…" };
                     if ui.button(RichText::new(del).color(DANGER)).clicked() {
                         todo.push(Do::Dialog(Dialog::Delete(paths.clone())));
                         ui.close_menu();
@@ -444,7 +444,7 @@ impl EditorApp {
     fn busy_with(&mut self, paths: &[PathBuf]) -> bool {
         let busy = self.job.is_some() && paths.iter().any(|p| self.is_used(p));
         if busy {
-            self.message = Some((false, "Esperá a que termine la exportación: ese clip se está usando.".into(), None));
+            self.message = Some((false, "エクスポートが終わるまで待ってください。このクリップは使用中です。".into(), None));
         }
         busy
     }
@@ -514,7 +514,7 @@ impl EditorApp {
             }
             Err(e) => {
                 crate::log::log(&format!("biblioteca: no se pudo eliminar {}: {e}", dir.display()));
-                self.message = Some((false, "No se pudo eliminar la carpeta: algo de adentro está abierto en otro programa.".into(), None));
+                self.message = Some((false, "フォルダを削除できませんでした。中のファイルが他のプログラムで開かれている可能性があります。".into(), None));
             }
         }
     }
@@ -539,7 +539,7 @@ impl EditorApp {
                     return Ok(());
                 }
                 self.release_files(&inside);
-                let moved = library::rename_folder(&from, &to).map_err(|_| "No se pudo cambiar el nombre: algo de adentro está abierto en otro programa.".to_string())?;
+                let moved = library::rename_folder(&from, &to).map_err(|_| "名前を変更できませんでした。中のファイルが他のプログラムで開かれている可能性があります。".to_string())?;
                 for (a, b) in moved {
                     self.moved_file(&a, &b);
                 }
@@ -577,18 +577,18 @@ impl EditorApp {
                 };
                 let mut lines = Vec::new();
                 if own == 1 {
-                    lines.push(if n == 1 { "Se manda a la Papelera de reciclaje: si te arrepentís, lo recuperás desde ahí.".to_string() } else { "1 se manda a la Papelera de reciclaje: si te arrepentís, lo recuperás desde ahí.".to_string() });
+                    lines.push(if n == 1 { "ごみ箱に移動します。後悔したらそこから復元できます。".to_string() } else { "1件をごみ箱に移動します。後悔したらそこから復元できます。".to_string() });
                 } else if own > 1 {
-                    let rest = "se mandan a la Papelera de reciclaje: si te arrepentís, los recuperás desde ahí.";
+                    let rest = "をごみ箱に移動します。後悔したらそこから復元できます。";
                     lines.push(if own == n { format!("S{}", &rest[1..]) } else { format!("{} {rest}", fmt_count(own)) });
                 }
                 if imported > 0 {
-                    lines.push(if imported == 1 { "El importado solo sale de la lista: el archivo queda donde está.".to_string() } else { format!("Los {} importados solo salen de la lista: los archivos quedan donde están.", fmt_count(imported)) });
+                    lines.push(if imported == 1 { "インポートした項目はリストから外れるだけです。ファイルはそのまま残ります。".to_string() } else { format!("インポートした {} 件はリストから外れるだけです。ファイルはそのまま残ります。", fmt_count(imported)) });
                 }
                 if used > 0 && own > 0 {
-                    lines.push(if used == 1 { "Está en la línea de tiempo: se va a quitar de ahí.".to_string() } else { format!("{} están en la línea de tiempo: se van a quitar de ahí.", fmt_count(used)) });
+                    lines.push(if used == 1 { "タイムラインにあります。そこからも削除されます。".to_string() } else { format!("{} 件はタイムラインにあります。そこからも削除されます。", fmt_count(used)) });
                 }
-                let ok = if own == 0 { "Quitar" } else { "Eliminar" };
+                let ok = if own == 0 { "Quitar" } else { "削除" };
                 confirm(ctx, &title, &lines, ok, &mut action)
             }
             Dialog::DeleteFolder(dir) => {
@@ -598,16 +598,16 @@ impl EditorApp {
                 let mut lines = vec![if inside.is_empty() {
                     "Se manda a la Papelera de reciclaje.".to_string()
                 } else {
-                    format!("Se manda a la Papelera de reciclaje con {} adentro: si te arrepentís, la recuperás desde ahí.", count(inside.len(), "video", "videos"))
+                    format!("中の {} 件とともにごみ箱に移動します。後悔したらそこから復元できます。", count(inside.len(), "video", "videos"))
                 }];
                 if used > 0 {
-                    lines.push(format!("{} en la línea de tiempo: se van a quitar de ahí.", if used == 1 { "Uno está".to_string() } else { format!("{} están", fmt_count(used)) }));
+                    lines.push(format!("{} 件はタイムラインにあります。そこからも削除されます。", if used == 1 { "Uno está".to_string() } else { format!("{} están", fmt_count(used)) }));
                 }
-                confirm(ctx, &format!("¿Eliminar la carpeta «{name}»?"), &lines, "Eliminar", &mut action)
+                confirm(ctx, &format!("¿Eliminar la carpeta «{name}»?"), &lines, "削除", &mut action)
             }
             Dialog::Name { name, rename, error, .. } => {
-                let title = if rename.is_some() { "Cambiar el nombre" } else { "Carpeta nueva" };
-                let ok = if rename.is_some() { "Guardar" } else { "Crear" };
+                let title = if rename.is_some() { "名前を変更" } else { "新しいフォルダ" };
+                let ok = if rename.is_some() { "保存" } else { "作成" };
                 modal(ctx, "lib_name", title, "Se crea dentro de la carpeta de clips.", 460.0, |ui| {
                     modal_body(ui, |ui| {
                         let r = ui.add(egui::TextEdit::singleline(name).desired_width(f32::INFINITY).margin(egui::vec2(10.0, 7.0)).font(FontId::proportional(14.0)));
@@ -626,7 +626,7 @@ impl EditorApp {
                             if button_sized(ui, ok, Kind::Primary, egui::vec2(120.0, 38.0)).clicked() {
                                 action = 2;
                             }
-                            if button_sized(ui, "Cancelar", Kind::Secondary, egui::vec2(120.0, 38.0)).clicked() {
+                            if button_sized(ui, "キャンセル", Kind::Secondary, egui::vec2(120.0, 38.0)).clicked() {
                                 action = 1;
                             }
                         });
@@ -664,7 +664,7 @@ fn confirm(ctx: &egui::Context, title: &str, lines: &[String], ok: &str, action:
                 if button_sized(ui, ok, Kind::Danger, egui::vec2(120.0, 38.0)).clicked() {
                     *action = 2;
                 }
-                if button_sized(ui, "Cancelar", Kind::Secondary, egui::vec2(120.0, 38.0)).clicked() {
+                if button_sized(ui, "キャンセル", Kind::Secondary, egui::vec2(120.0, 38.0)).clicked() {
                     *action = 1;
                 }
             });

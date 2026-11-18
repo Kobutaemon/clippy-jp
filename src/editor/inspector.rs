@@ -30,11 +30,11 @@ fn starts_edit(ui: &egui::Ui, r: &egui::Response) -> bool {
 impl EditorApp {
     pub(super) fn props_panel(&mut self, ui: &mut egui::Ui) {
         let Some((ti, i)) = self.selection() else {
-            ui.label(RichText::new("Clip").family(bold()).size(17.0).color(TEXT));
+            ui.label(RichText::new("クリップ").family(bold()).size(17.0).color(TEXT));
             ui.add_space(6.0);
-            ui.label(RichText::new("Tocá un clip en la línea de tiempo para ajustar su imagen, su velocidad y su sonido.").color(MUTED));
+            ui.label(RichText::new("タイムラインのクリップをクリックして、画像・速度・音声を調整します。").color(MUTED));
             ui.add_space(12.0);
-            let text = format!("Ayuda y atajos ({})", shortcuts::short(&self.prefs.keys, Act::Shortcuts));
+            let text = format!("ヘルプとショートカット ({})", shortcuts::short(&self.prefs.keys, Act::Shortcuts));
             if button(ui, &text, Kind::Ghost).clicked() {
                 self.open_help(HelpTab::Guide);
             }
@@ -44,7 +44,7 @@ impl EditorApp {
         let video = self.selected_video();
         ui.add(egui::Label::new(RichText::new(library::pretty_name(&p.path)).family(bold()).size(17.0).color(TEXT)).truncate())
             .on_hover_text(p.path.display().to_string());
-        let mut meta = vec![if p.still() { format!("Imagen congelada · {}", fmt_time(p.len)) } else { fmt_time(p.len) }];
+        let mut meta = vec![if p.still() { format!("フリーズ画像 · {}", fmt_time(p.len)) } else { fmt_time(p.len) }];
         if let (Some(_), Some(pr)) = (video, self.loader.probe(&p.path)) {
             meta.push(format!("{}×{} · {:.0} fps · {}", pr.width, pr.height, pr.fps(), pr.codec()));
         }
@@ -56,8 +56,8 @@ impl EditorApp {
             ui.add_space(18.0);
         }
         if p.still() {
-            caption(ui, "Duración");
-            ui.label(RichText::new("Arrastrá su borde en la línea de tiempo para que dure más o menos.").size(13.0).color(MUTED));
+            caption(ui, "長さ");
+            ui.label(RichText::new("タイムライン上で端をドラッグして長さを調整できます。").size(13.0).color(MUTED));
             return;
         }
         self.speed_section(ui, p.speed);
@@ -66,16 +66,16 @@ impl EditorApp {
     }
 
     fn image_section(&mut self, ui: &mut egui::Ui, frame: Frame, path: &std::path::Path) {
-        caption(ui, "Imagen");
+        caption(ui, "画像");
         ui.horizontal_wrapped(|ui| {
             ui.spacing_mut().item_spacing = egui::vec2(6.0, 6.0);
-            if icon_button(ui, Glyph::Rotate, "Girar", Kind::Secondary, egui::Vec2::ZERO).on_hover_text("Girar un cuarto de vuelta a la derecha").clicked() {
+            if icon_button(ui, Glyph::Rotate, "回転", Kind::Secondary, egui::Vec2::ZERO).on_hover_text("右に90度回転").clicked() {
                 self.edit_frame(|f| f.turns = (f.turns + 1) % 4);
             }
-            if icon_button(ui, Glyph::Flip, "Espejo", Kind::Secondary, egui::Vec2::ZERO).on_hover_text("Dar vuelta de izquierda a derecha").clicked() {
+            if icon_button(ui, Glyph::Flip, "ミラー", Kind::Secondary, egui::Vec2::ZERO).on_hover_text("左右反転").clicked() {
                 self.edit_frame(|f| f.flip = !f.flip);
             }
-            if icon_button(ui, Glyph::Crop, "Recortar", Kind::Secondary, egui::Vec2::ZERO).on_hover_text("Elegir qué parte de la imagen se ve").clicked() {
+            if icon_button(ui, Glyph::Crop, "トリミング", Kind::Secondary, egui::Vec2::ZERO).on_hover_text("表示する画像部分を選択").clicked() {
                 self.start_crop();
             }
         });
@@ -85,20 +85,20 @@ impl EditorApp {
         if shape.is_some_and(|(w, h)| (w / h - canvas.0 / canvas.1).abs() > 0.01) {
             ui.add_space(8.0);
             let mut sizing = frame.sizing;
-            if seg(ui, &mut sizing, &[(Sizing::Whole, "Entera"), (Sizing::Fill, "Llenar"), (Sizing::Stretch, "Estirar")]) {
+            if seg(ui, &mut sizing, &[(Sizing::Whole, "全体"), (Sizing::Fill, "フィル"), (Sizing::Stretch, "ストレッチ")]) {
                 self.edit_frame(|f| f.sizing = sizing);
             }
         }
         if frame != Frame::default() {
             ui.add_space(4.0);
-            if button(ui, "Restablecer imagen", Kind::Ghost).clicked() {
+            if button(ui, "画像をリセット", Kind::Ghost).clicked() {
                 self.edit_frame(|f| *f = Frame::default());
             }
         }
     }
 
     fn speed_section(&mut self, ui: &mut egui::Ui, speed: f64) {
-        caption(ui, "Velocidad");
+        caption(ui, "速度");
         let mut pick = (speed * 100.0).round() as u32;
         let labels: Vec<(u32, String)> = SPEEDS.iter().map(|&s| ((s * 100.0) as u32, fmt_speed(s))).collect();
         let opts: Vec<(u32, &str)> = labels.iter().map(|(v, l)| (*v, l.as_str())).collect();
@@ -117,14 +117,14 @@ impl EditorApp {
             self.set_speed(s);
         }
         if speed != 1.0 && self.selected_audio().is_some() {
-            ui.label(RichText::new("El sonido sube o baja de tono con la velocidad.").size(12.5).color(MUTED));
+            ui.label(RichText::new("速度に応じて音程が変わります。").size(12.5).color(MUTED));
         }
     }
 
     fn sound_section(&mut self, ui: &mut egui::Ui, path: &std::path::Path) {
-        caption(ui, "Sonido");
+        caption(ui, "音声");
         let Some((ta, ia)) = self.selected_audio() else {
-            let why = if self.has_audio(path) { "Está separado: lo encontrás en una pista de audio." } else { "Este clip no tiene sonido." };
+            let why = if self.has_audio(path) { "分離されています。音声トラックにあります。" } else { "このクリップには音声がありません。" };
             ui.label(RichText::new(why).size(13.0).color(MUTED));
             return;
         };
@@ -133,8 +133,8 @@ impl EditorApp {
         let mut changed = false;
         ui.horizontal(|ui| {
             let key = shortcuts::short(&self.prefs.keys, Act::MuteClip);
-            changed |= toggle(ui, &mut on).on_hover_text(format!("{} ({key})", if on { "Silenciar" } else { "Activar el sonido" })).changed();
-            ui.label(RichText::new(if on { "Con sonido" } else { "Silenciado" }).color(if on { TEXT } else { MUTED }));
+            changed |= toggle(ui, &mut on).on_hover_text(format!("{} ({key})", if on { "ミュート" } else { "音声をオン" })).changed();
+            ui.label(RichText::new(if on { "音声あり" } else { "ミュート" }).color(if on { TEXT } else { MUTED }));
         });
         let mut start = changed;
         ui.add_enabled_ui(on, |ui| {

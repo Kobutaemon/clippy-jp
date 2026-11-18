@@ -211,9 +211,9 @@ fn draw_wave(painter: &egui::Painter, p: &Piece, info: Option<&library::Info>, a
         }
         Some(_) => {
             clip.hline(ar.x_range(), mid, Stroke::new(1.0_f32, MUTED));
-            note("Silenciado");
+            note("ミュート");
         }
-        None => note("Cargando audio…"),
+        None => note("音声を読み込み中…"),
     }
 }
 
@@ -251,16 +251,16 @@ pub(super) fn fmt_len(t: i64) -> String {
 
 impl EditorApp {
     pub(super) fn top_bar(&mut self, ui: &mut egui::Ui) {
-        // El aviso ("Listo: …", un error) aparece con un fundido corto; al irse, se va de una.
+        // El aviso ("完了: …", un error) aparece con un fundido corto; al irse, se va de una.
         let shown = self.job.is_none() && self.message.is_some();
         let fade = ui.ctx().animate_bool_with_time_and_easing(egui::Id::new("message"), shown, if shown { T_FADE } else { 0.0 }, ease_out);
         ui.horizontal_centered(|ui| {
             app_mark(ui, 26.0);
-            ui.label(RichText::new("Clippy").family(bold()).size(18.0).color(TEXT));
-            ui.label(RichText::new("Editor").size(18.0).color(MUTED));
+            ui.label(RichText::new("クリップpy").family(bold()).size(18.0).color(TEXT));
+            ui.label(RichText::new("エディタ").size(18.0).color(MUTED));
             ui.add_space(24.0);
             ui.add_enabled_ui(!self.undo.is_empty(), |ui| {
-                let tip = format!("Deshacer ({})", shortcuts::short(&self.prefs.keys, Act::Undo));
+                let tip = format!("元に戻す ({})", shortcuts::short(&self.prefs.keys, Act::Undo));
                 if icon_only_button(ui, Glyph::Undo, Kind::Ghost, &tip).clicked() {
                     self.undo();
                 }
@@ -272,14 +272,14 @@ impl EditorApp {
                 }
             });
             ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                let tip = format!("Atajos y ayuda ({})", shortcuts::short(&self.prefs.keys, Act::Shortcuts));
+                let tip = format!("ショートカットとヘルプ ({})", shortcuts::short(&self.prefs.keys, Act::Shortcuts));
                 if gear_button(ui).on_hover_text(tip).clicked() {
                     self.open_help(HelpTab::Keys);
                 }
                 ui.add_space(6.0);
                 if let Some(job) = &self.job {
                     let p = job.progress.get();
-                    if button(ui, "Cancelar", Kind::Secondary).clicked() {
+                    if button(ui, "キャンセル", Kind::Secondary).clicked() {
                         job.progress.cancel.store(true, Ordering::Relaxed);
                     }
                     ui.add(
@@ -287,23 +287,23 @@ impl EditorApp {
                             .desired_width(240.0)
                             .desired_height(32.0)
                             .rounding(6.0)
-                            .text(RichText::new(format!("Exportando… {:.0}%", p * 100.0)).color(BLACK)),
+                            .text(RichText::new(format!("エクスポート中… {:.0}%", p * 100.0)).color(BLACK)),
                     );
                 } else {
                     let enabled = !self.is_empty();
-                    let r = ui.add_enabled_ui(enabled, |ui| icon_button(ui, Glyph::Export, "Exportar video", Kind::Primary, egui::vec2(164.0, 36.0))).inner;
+                    let r = ui.add_enabled_ui(enabled, |ui| icon_button(ui, Glyph::Export, "動画をエクスポート", Kind::Primary, egui::vec2(164.0, 36.0))).inner;
                     if r.clicked() {
                         self.export();
                     }
                     if !enabled {
-                        r.on_disabled_hover_text("Agregá al menos un clip a la línea de tiempo");
+                        r.on_disabled_hover_text("タイムラインに少なくとも1つのクリップを追加してください");
                     }
                     if let Some((ok, msg, out)) = self.message.clone() {
                         ui.add_space(8.0);
                         ui.scope(|ui| {
                             ui.multiply_opacity(fade);
                             if let Some(out) = out {
-                                if icon_button(ui, Glyph::Folder, "Abrir carpeta", Kind::Secondary, Vec2::ZERO).clicked() {
+                                if icon_button(ui, Glyph::Folder, "フォルダを開く", Kind::Secondary, Vec2::ZERO).clicked() {
                                     if let Some(d) = out.parent() {
                                         open_folder(d);
                                     }
@@ -333,12 +333,12 @@ impl EditorApp {
             let third = ui.available_width() / 3.0;
             ui.allocate_ui_with_layout(egui::vec2(third, 40.0), Layout::left_to_right(Align::Center), |ui| {
                 ui.add_enabled_ui(!empty, |ui| {
-                    if icon_button(ui, Glyph::Scissors, "Dividir", Kind::Secondary, Vec2::ZERO).on_hover_text(format!("Cortar en el cursor ({})", shortcuts::short(&self.prefs.keys, Act::Split))).clicked() {
+                    if icon_button(ui, Glyph::Scissors, "分割", Kind::Secondary, Vec2::ZERO).on_hover_text(format!("カーソル位置で分割 ({})", shortcuts::short(&self.prefs.keys, Act::Split))).clicked() {
                         self.split();
                     }
                 });
                 ui.add_enabled_ui(has_sel, |ui| {
-                    if icon_button(ui, Glyph::Trash, "Eliminar", Kind::Secondary, Vec2::ZERO).on_hover_text(format!("Eliminar el clip elegido ({})", shortcuts::short(&self.prefs.keys, Act::Delete))).clicked() {
+                    if icon_button(ui, Glyph::Trash, "削除", Kind::Secondary, Vec2::ZERO).on_hover_text(format!("選択中のクリップを削除 ({})", shortcuts::short(&self.prefs.keys, Act::Delete))).clicked() {
                         self.delete_selected();
                     }
                 });
@@ -349,11 +349,11 @@ impl EditorApp {
                     }
                 });
                 ui.add_enabled_ui(!empty, |ui| {
-                    let tip = format!("Congelar el cuadro del cursor 3 segundos ({})", shortcuts::short(&self.prefs.keys, Act::Freeze));
+                    let tip = format!("カーソル位置のフレームを3秒フリーズ ({})", shortcuts::short(&self.prefs.keys, Act::Freeze));
                     if icon_only_button(ui, Glyph::Freeze, Kind::Secondary, &tip).clicked() {
                         self.freeze();
                     }
-                    let tip = format!("Poner o sacar un marcador en el cursor ({})", shortcuts::short(&self.prefs.keys, Act::Marker));
+                    let tip = format!("カーソル位置にマーカーを追加/削除 ({})", shortcuts::short(&self.prefs.keys, Act::Marker));
                     if icon_only_button(ui, Glyph::Marker, Kind::Secondary, &tip).clicked() {
                         self.toggle_marker();
                     }
@@ -365,7 +365,7 @@ impl EditorApp {
                 let group = 36.0 + 12.0 + tw;
                 ui.add_space(((third - group) / 2.0).max(0.0));
                 ui.add_enabled_ui(!empty, |ui| {
-                    if play_button(ui, self.playing, 36.0).on_hover_text(format!("Reproducir / pausar ({})", shortcuts::short(&self.prefs.keys, Act::PlayPause))).clicked() {
+                    if play_button(ui, self.playing, 36.0).on_hover_text(format!("再生 / 一時停止 ({})", shortcuts::short(&self.prefs.keys, Act::PlayPause))).clicked() {
                         self.toggle_play();
                     }
                 });
@@ -373,7 +373,7 @@ impl EditorApp {
                 ui.label(RichText::new(time).size(15.0).color(TEXT));
             });
             ui.allocate_ui_with_layout(egui::vec2(ui.available_width(), 40.0), Layout::right_to_left(Align::Center), |ui| {
-                if button(ui, "Ajustar", Kind::Ghost).on_hover_text("Ver toda la línea de tiempo").clicked() {
+                if button(ui, "フィット", Kind::Ghost).on_hover_text("タイムライン全体を表示").clicked() {
                     self.run_action(Act::ZoomFit);
                 }
                 let tip = format!("Acercar ({})", shortcuts::short(&self.prefs.keys, Act::ZoomIn));
@@ -394,9 +394,9 @@ impl EditorApp {
                 let magnet = self.prefs.magnet;
                 let key = shortcuts::short(&self.prefs.keys, Act::Magnet);
                 let tip = if magnet {
-                    format!("Imán prendido: los clips se pegan solos ({key})")
+                    format!("マグネットオン: クリップが自動で吸着 ({key})")
                 } else {
-                    format!("Imán apagado: los clips quedan donde los soltás y, si se superponen, se funden ({key})")
+                    format!("マグネットオフ: ドロップした位置に残り、重なるとフェード ({key})")
                 };
                 if icon_only_button(ui, Glyph::Magnet, if magnet { Kind::Secondary } else { Kind::Ghost }, &tip).clicked() {
                     self.run_action(Act::Magnet);
@@ -449,11 +449,11 @@ impl EditorApp {
                 let c = self.tracks[ti].clips[i].curves;
                 if fades[0].1 { c.1 } else { c.0 }
             });
-            ui.menu_button("Curva del fundido", |ui| {
+            ui.menu_button("フェードカーブ", |ui| {
                 for (c, label, tip) in [
-                    (Curve::Even, "Pareja", "Al cruzarse dos sonidos el volumen no baja"),
-                    (Curve::Linear, "Lineal", "En línea recta"),
-                    (Curve::Smooth, "Suave", "Arranca y termina despacio"),
+                    (Curve::Even, "ペア", "2つの音声が重なっても音量は下がりません"),
+                    (Curve::Linear, "リニア", "直線"),
+                    (Curve::Smooth, "Suave", "ゆっくり開始・終了"),
                 ] {
                     if ui.add(egui::Button::new(label).selected(current == Some(c))).on_hover_text(tip).clicked() {
                         self.set_curve(fades, c);
@@ -463,15 +463,15 @@ impl EditorApp {
             });
             ui.separator();
         }
-        let away = "Llevá el cursor sobre el clip";
-        item(ui, Act::Split, "Dividir", at_cursor, away);
-        item(ui, Act::Duplicate, "Duplicar", true, "");
+        let away = "クリップの上にカーソルを移動";
+        item(ui, Act::Split, "分割", at_cursor, away);
+        item(ui, Act::Duplicate, "複製", true, "");
         let video = self.selected_video().is_some();
         if video && !p.still() {
-            item(ui, Act::Freeze, "Congelar cuadro", at_cursor, away);
+            item(ui, Act::Freeze, "フレームをフリーズ", at_cursor, away);
         }
         if !p.still() {
-            ui.menu_button("Velocidad", |ui| {
+            ui.menu_button("速度", |ui| {
                 for s in SPEEDS {
                     if ui.add(egui::Button::new(fmt_speed(s)).selected(p.speed == s)).clicked() {
                         self.push_undo();
@@ -482,16 +482,16 @@ impl EditorApp {
             });
         }
         if video {
-            ui.menu_button("Imagen", |ui| {
-                if ui.button("Girar a la derecha").clicked() {
+            ui.menu_button("画像", |ui| {
+                if ui.button("右に回転").clicked() {
                     self.edit_frame(|f| f.turns = (f.turns + 1) % 4);
                     ui.close_menu();
                 }
-                if ui.button("Espejo").clicked() {
+                if ui.button("ミラー").clicked() {
                     self.edit_frame(|f| f.flip = !f.flip);
                     ui.close_menu();
                 }
-                if ui.button("Recortar…").clicked() {
+                if ui.button("トリミング…").clicked() {
                     self.start_crop();
                     ui.close_menu();
                 }
@@ -499,13 +499,13 @@ impl EditorApp {
         }
         if let Some((ta, ia)) = self.selected_audio().filter(|_| !p.still()) {
             let muted = self.tracks[ta].clips[ia].muted;
-            item(ui, Act::MuteClip, if muted { "Activar el sonido" } else { "Silenciar" }, true, "");
+            item(ui, Act::MuteClip, if muted { "音声をオン" } else { "ミュート" }, true, "");
         }
         if self.can_link() {
             item(ui, Act::Link, self.link_label(), true, "");
         }
         ui.separator();
-        item(ui, Act::Delete, "Eliminar", true, "");
+        item(ui, Act::Delete, "削除", true, "");
         if let Some(act) = run {
             self.run_action(act);
         }
@@ -515,7 +515,7 @@ impl EditorApp {
     /// y oírla. Con el botón derecho sobre una pista se la quita.
     fn track_headers(&mut self, ui: &mut egui::Ui, g: Rect) {
         let size = egui::vec2(GUTTER - 10.0, RULER_H - 2.0);
-        let r = ui.put(Rect::from_min_size(g.min + egui::vec2(0.0, 1.0), size), |ui: &mut egui::Ui| icon_button(ui, Glyph::Plus, "Pista", Kind::Ghost, size));
+        let r = ui.put(Rect::from_min_size(g.min + egui::vec2(0.0, 1.0), size), |ui: &mut egui::Ui| icon_button(ui, Glyph::Plus, "トラック", Kind::Ghost, size));
         let menu = ui.id().with("add_track");
         if r.clicked() {
             ui.memory_mut(|m| m.toggle_popup(menu));
@@ -523,12 +523,12 @@ impl EditorApp {
         let mut add = None;
         egui::popup_below_widget(ui, menu, &r, egui::PopupCloseBehavior::CloseOnClick, |ui| {
             ui.set_min_width(150.0);
-            for (kind, label) in [(TrackKind::Video, "Pista de video"), (TrackKind::Audio, "Pista de audio")] {
+            for (kind, label) in [(TrackKind::Video, "映像トラック"), (TrackKind::Audio, "音声トラック")] {
                 let b = ui.add_enabled(self.count(kind) < MAX_TRACKS, egui::Button::new(label));
                 if b.clicked() {
                     add = Some(kind);
                 }
-                b.on_disabled_hover_text(format!("Hasta {MAX_TRACKS} pistas de cada tipo"));
+                b.on_disabled_hover_text(format!("各タイプ最大 {MAX_TRACKS} トラック"));
             }
         });
         // Qué tocaron: (pista, false = ocultar o silenciar, true = quitar).
@@ -539,7 +539,7 @@ impl EditorApp {
             let row = Rect::from_x_y_ranges(g.x_range(), yr);
             let removable = t.kind == TrackKind::Audio || !one_video;
             ui.interact(row, ui.id().with(("track", t.id)), Sense::click()).context_menu(|ui| {
-                let b = ui.add_enabled(removable, egui::Button::new("Quitar pista")).on_disabled_hover_text("Siempre queda al menos una pista de video");
+                let b = ui.add_enabled(removable, egui::Button::new("トラックを削除")).on_disabled_hover_text("Siempre queda al menos una pista de video");
                 if b.clicked() {
                     act = Some((ti, true));
                     ui.close_menu();
@@ -547,8 +547,8 @@ impl EditorApp {
             });
             let x = row.right() - 22.0;
             let (glyph, on, tip) = match t.kind {
-                TrackKind::Video => (Glyph::Eye, !t.hidden, if t.hidden { "Mostrar la pista" } else { "Ocultar la pista" }),
-                TrackKind::Audio => (Glyph::Speaker, !t.muted, if t.muted { "Activar el sonido de la pista" } else { "Silenciar la pista" }),
+                TrackKind::Video => (Glyph::Eye, !t.hidden, if t.hidden { "トラックを表示" } else { "トラックを非表示" }),
+                TrackKind::Audio => (Glyph::Speaker, !t.muted, if t.muted { "トラックの音声をオン" } else { "ミュート la pista" }),
             };
             let at = Rect::from_center_size(Pos2::new(x, row.center().y), Vec2::splat(24.0));
             if ui.put(at, |ui: &mut egui::Ui| icon_toggle(ui, glyph, on, tip)).clicked() {
@@ -975,13 +975,13 @@ impl EditorApp {
             resp.context_menu(|ui| match self.menu.clone() {
                 Menu::Clip { fades } => self.clip_menu(ui, &fades),
                 Menu::Marker(k) => {
-                    if ui.button("Ir al marcador").clicked() {
+                    if ui.button("マーカーへ移動").clicked() {
                         if let Some(&m) = self.markers.get(k) {
                             self.seek(m);
                         }
                         ui.close_menu();
                     }
-                    if ui.button("Quitar marcador").clicked() {
+                    if ui.button("マーカーを削除").clicked() {
                         if k < self.markers.len() {
                             self.push_undo();
                             self.markers.remove(k);
@@ -990,7 +990,7 @@ impl EditorApp {
                     }
                 }
                 Menu::Ruler(t) => {
-                    if ui.button("Poner un marcador acá").clicked() {
+                    if ui.button("ここにマーカーを追加").clicked() {
                         self.push_undo();
                         self.markers.push(t);
                         self.markers.sort_unstable();
@@ -1042,7 +1042,7 @@ impl EditorApp {
         if self.is_empty() {
             let r = Rect::from_min_max(Pos2::new(x0, ruler.bottom() + LANE_GAP), Pos2::new(rect.right() - PAD, lanes_bottom));
             painter.rect_stroke(r, 8.0, Stroke::new(1.0_f32, CONTROL_HOVER));
-            painter.text(r.center(), Align2::CENTER_CENTER, "Hacé clic en un video de la biblioteca o arrastralo acá", FontId::proportional(14.0), MUTED);
+            painter.text(r.center(), Align2::CENTER_CENTER, "ライブラリの動画をクリックするか、ここにドラッグ", FontId::proportional(14.0), MUTED);
             return;
         }
 
@@ -1135,7 +1135,7 @@ impl EditorApp {
         // Mientras se arrastra una esquina, cuánto dura ese fundido.
         if let (Drag::Fade { parts, out, .. }, Some(h)) = (&self.drag, pointer) {
             let (crossed, len) = self.fade_len(&parts[0], *out);
-            let text = format!("{} {}", if crossed { "Fundido" } else if *out { "Se va en" } else { "Aparece en" }, fmt_len(len));
+            let text = format!("{} {}", if crossed { "フェード" } else if *out { "Se va en" } else { "表示位置" }, fmt_len(len));
             let g = painter.layout_no_wrap(text, FontId::proportional(12.0), WHITE);
             let r = Rect::from_min_size(Pos2::new(h.x + 12.0, h.y - g.size().y - 12.0), g.size() + egui::vec2(12.0, 6.0));
             painter.rect_filled(r, 4.0, BADGE);

@@ -15,7 +15,7 @@ use super::EditorApp;
 
 /// Proporciones del lienzo que se pueden elegir (None = la del primer clip).
 pub(super) const RATIOS: [(Option<Ratio>, &str); 7] = [
-    (None, "Original"),
+    (None, "オリジナル"),
     (Some((16, 9)), "16:9"),
     (Some((9, 16)), "9:16"),
     (Some((1, 1)), "1:1"),
@@ -60,7 +60,7 @@ pub(super) struct CropEdit {
 
 /// Proporciones del recorte: libre, la del lienzo y algunas fijas.
 fn crop_shapes(canvas: (f32, f32)) -> [(&'static str, Option<f32>); 5] {
-    [("Libre", None), ("Lienzo", Some(canvas.0 / canvas.1)), ("16:9", Some(16.0 / 9.0)), ("9:16", Some(9.0 / 16.0)), ("1:1", Some(1.0))]
+    [("自由", None), ("キャンバス", Some(canvas.0 / canvas.1)), ("16:9", Some(16.0 / 9.0)), ("9:16", Some(9.0 / 16.0)), ("1:1", Some(1.0))]
 }
 
 /// `r` en el rectángulo de pantalla `area` (de 0 a 1 -> px).
@@ -110,8 +110,8 @@ impl EditorApp {
         let canvas = Rect::from_center_size(area.center(), Vec2::new(cw, ch) * scale);
         p.rect_filled(canvas, 6.0, Color32::BLACK);
         if self.is_empty() {
-            p.text(area.center() - egui::vec2(0.0, 12.0), Align2::CENTER_CENTER, "Tu video aparece acá", FontId::proportional(20.0), TEXT);
-            p.text(area.center() + egui::vec2(0.0, 16.0), Align2::CENTER_CENTER, "Elegí un clip de la biblioteca para empezar", FontId::proportional(14.0), MUTED);
+            p.text(area.center() - egui::vec2(0.0, 12.0), Align2::CENTER_CENTER, "ここに動画が表示されます", FontId::proportional(20.0), TEXT);
+            p.text(area.center() + egui::vec2(0.0, 16.0), Align2::CENTER_CENTER, "ライブラリからクリップを選んで開始", FontId::proportional(14.0), MUTED);
             return;
         }
         if let Some(e) = self.preview_error() {
@@ -139,14 +139,14 @@ impl EditorApp {
     /// Barra de abajo: la proporción del lienzo y la pantalla completa.
     fn ratio_bar(&mut self, ui: &mut egui::Ui, bar: Rect) {
         let mut ui = ui.new_child(egui::UiBuilder::new().max_rect(bar).layout(Layout::right_to_left(Align::Center)));
-        let tip = format!("Pantalla completa ({})", shortcuts::short(&self.prefs.keys, Act::Fullscreen));
+        let tip = format!("フルスクリーン ({})", shortcuts::short(&self.prefs.keys, Act::Fullscreen));
         ui.add_enabled_ui(!self.is_empty(), |ui| {
             if icon_only_button(ui, Glyph::Fullscreen, Kind::Secondary, &tip).clicked() {
                 self.toggle_fullscreen();
             }
         });
-        let current = RATIOS.iter().find(|r| r.0 == self.ratio).map_or("Original", |r| r.1);
-        let r = button(&mut ui, current, Kind::Secondary).on_hover_text("Forma del video: horizontal, vertical, cuadrado…");
+        let current = RATIOS.iter().find(|r| r.0 == self.ratio).map_or("オリジナル", |r| r.1);
+        let r = button(&mut ui, current, Kind::Secondary).on_hover_text("動画の形状: 横・縦・正方形…");
         let menu = ui.id().with("ratio_menu");
         if r.clicked() {
             ui.memory_mut(|m| m.toggle_popup(menu));
@@ -157,8 +157,8 @@ impl EditorApp {
             ui.set_min_width(170.0);
             for (ratio, label) in RATIOS {
                 let tip = match (ratio, first) {
-                    (None, Some((w, h))) => format!("Como el primer clip ({w}×{h})"),
-                    (None, None) => "Como el primer clip".to_string(),
+                    (None, Some((w, h))) => format!("最初のクリップと同じ ({w}×{h})"),
+                    (None, None) => "最初のクリップと同じ".to_string(),
                     (Some((w, h)), _) => format!("{w} de ancho por {h} de alto"),
                 };
                 if ui.add(egui::Button::new(label).selected(ratio == self.ratio)).on_hover_text(tip).clicked() {
@@ -169,7 +169,7 @@ impl EditorApp {
         if let Some(r) = pick {
             self.set_ratio(r);
         }
-        ui.label(RichText::new("Proporción").size(13.0).color(MUTED));
+        ui.label(RichText::new("アスペクト比").size(13.0).color(MUTED));
     }
 
     /// Entra o sale de la pantalla completa (sin clips no hay nada que ver).
@@ -248,7 +248,7 @@ impl EditorApp {
         let mut ui = ui.new_child(egui::UiBuilder::new().max_rect(row).layout(Layout::left_to_right(Align::Center)));
         ui.multiply_opacity(a);
         ui.spacing_mut().item_spacing.x = 16.0;
-        let tip = format!("Reproducir / pausar ({})", shortcuts::short(&self.prefs.keys, Act::PlayPause));
+        let tip = format!("再生 / 一時停止 ({})", shortcuts::short(&self.prefs.keys, Act::PlayPause));
         if play_button(&mut ui, self.playing, 40.0).on_hover_text(tip).clicked() {
             self.toggle_play();
         }
@@ -262,7 +262,7 @@ impl EditorApp {
         });
         let mut exit = false;
         ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-            exit = icon_only_button(ui, Glyph::ExitFullscreen, Kind::Ghost, "Salir de pantalla completa (Esc)").clicked();
+            exit = icon_only_button(ui, Glyph::ExitFullscreen, Kind::Ghost, "フルスクリーンを終了 (Esc)").clicked();
             let (rect, resp) = ui.allocate_exact_size(egui::vec2(ui.available_width(), 40.0), Sense::click_and_drag());
             self.seek_bar(ui, rect, &resp);
         });
@@ -353,7 +353,7 @@ impl EditorApp {
         let p = ui.painter_at(area);
         let layer = self.layers.iter().find(|l| l.piece() == c.id);
         let Some(l) = layer else {
-            p.text(area.center(), Align2::CENTER_CENTER, "Llevá el cursor a un lugar donde se vea este clip", FontId::proportional(14.0), MUTED);
+            p.text(area.center(), Align2::CENTER_CENTER, "このクリップが見える場所にカーソルを移動", FontId::proportional(14.0), MUTED);
             self.crop_bar(ui, bar, c, (16.0, 9.0));
             return;
         };
@@ -442,9 +442,9 @@ impl EditorApp {
         let (mut done, mut cancel) = ui.input(|i| (i.key_pressed(egui::Key::Enter), i.key_pressed(egui::Key::Escape)));
         ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
             ui.spacing_mut().item_spacing.x = 8.0;
-            done |= button(ui, "Listo", Kind::Secondary).on_hover_text("Enter").clicked();
-            cancel |= button(ui, "Cancelar", Kind::Ghost).on_hover_text("Esc").clicked();
-            if button(ui, "Ver todo", Kind::Ghost).on_hover_text("Volver a la imagen entera").clicked() {
+            done |= button(ui, "完了", Kind::Secondary).on_hover_text("Enter").clicked();
+            cancel |= button(ui, "キャンセル", Kind::Ghost).on_hover_text("Esc").clicked();
+            if button(ui, "全体を表示", Kind::Ghost).on_hover_text("画像全体に戻す").clicked() {
                 c.rect = [0.0, 0.0, 1.0, 1.0];
                 c.shape = 0;
             }
