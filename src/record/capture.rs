@@ -88,7 +88,7 @@ impl Capture {
         }
         let primary = unsafe { MonitorFromPoint(POINT::default(), MONITOR_DEFAULTTOPRIMARY) };
         let want = monitor.filter(|m| all.iter().any(|(_, o)| o.monitor == *m)).unwrap_or(primary);
-        let mut last = anyhow!("no se encontró ningún monitor para grabar");
+        let mut last = anyhow!("録画するモニターが見つかりませんでした");
         for (adapter, out) in all.into_iter().filter(|(_, o)| o.monitor == want) {
             let name = out.name.clone();
             match Self::open_on(adapter, out) {
@@ -250,7 +250,7 @@ impl Capture {
             Err(e) if e.code() == DXGI_ERROR_WAIT_TIMEOUT => {}
             Err(e) => {
                 if e.code() != DXGI_ERROR_ACCESS_LOST {
-                    log(&format!("duplicación de {}: {e}", self.out.name));
+                    log(&format!("{} の複製: {e}", self.out.name));
                 }
                 self.dup = None;
                 self.retry_at = now;
@@ -280,7 +280,7 @@ impl Capture {
                 d.MiscFlags = 0;
                 let mut t = None;
                 self.device.CreateTexture2D(&d, None, Some(&mut t))?;
-                let tex = t.ok_or_else(|| anyhow!("sin textura de captura"))?;
+                let tex = t.ok_or_else(|| anyhow!("キャプチャテクスチャなし"))?;
                 if shape.0 as u64 * image.1 as u64 != shape.1 as u64 * image.0 as u64 {
                     log(&format!("{} a {}x{}: estirado a la forma del monitor ({}x{})", self.out.name, image.0, image.1, shape.0, shape.1));
                 }

@@ -221,7 +221,7 @@ impl EditorApp {
                             res_opts.push((h, format!("{h}p")));
                         }
                     }
-                    row(ui, "Resolución", 170.0, |ui| {
+                    row(ui, "解像度", 170.0, |ui| {
                         let opts: Vec<(u32, &str)> = res_opts.iter().map(|(v, l)| (*v, l.as_str())).collect();
                         seg(ui, &mut d.height, &opts);
                     });

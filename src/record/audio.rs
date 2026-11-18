@@ -1,7 +1,7 @@
 //! Captura de audio con WASAPI:
 //! - "Juego": solo el proceso del juego (process loopback, incluye su árbol de procesos).
-//! - "Escritorio": todo lo demás (process loopback excluyendo el juego), o todo el sistema si no hay juego detectado.
-//! - "Micrófono": el dispositivo elegido o el predeterminado de Windows.
+//! - "デスクトップ": todo lo demás (process loopback excluyendo el juego), o todo el sistema si no hay juego detectado.
+//! - "マイク": el dispositivo elegido o el predeterminado de Windows.
 //!
 //! Se captura en el formato del dispositivo (float, con sus canales) y Clippy lo baja a estéreo:
 //! la conversión de Windows de 5.1/7.1 a estéreo atenúa el sonido 10 dB o más.
@@ -286,7 +286,7 @@ pub fn capture_devices() -> Vec<(String, String)> {
                 .OpenPropertyStore(STGM_READ)
                 .and_then(|ps| ps.GetValue(&PKEY_Device_FriendlyName))
                 .map(|p| p.to_string())
-                .unwrap_or_else(|_| "Micrófono".into());
+                .unwrap_or_else(|_| "マイク".into());
             v.push((id, name));
         }
     }

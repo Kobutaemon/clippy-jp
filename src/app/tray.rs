@@ -87,7 +87,7 @@ pub fn run(background: bool) {
             hinst,
             None,
         ) else {
-            log("no se pudo crear la ventana principal");
+            log("メインウィンドウを作成できませんでした");
             return;
         };
         TASKBAR_CREATED.with(|t| *t.borrow_mut() = RegisterWindowMessageW(w!("TaskbarCreated")));
@@ -111,7 +111,7 @@ pub fn run(background: bool) {
             with_app(|a| {
                 a.balloon(
                     "Clippy が録画中です",
-                    &format!("Apretá {key} para guardar los últimos {}. Clippy queda acá, en la bandeja.", fmt_secs(cfg.seconds)),
+                    &format!("{key} を押すと最後の {} を保存。Clippyはトレイに残ります。", fmt_secs(cfg.seconds)),
                     false,
                 )
             });
@@ -167,7 +167,7 @@ impl App {
             let failed = self.register_hotkeys();
             if !failed.is_empty() {
                 let k = failed.join(", ");
-                self.balloon("キーが使用中", &format!("Otro programa está usando {k}. Elegí otra en Ajustes."), true);
+                self.balloon("キーが使用中", &format!("他のプログラムが {k} を使用中です。設定で別のキーを選んでください。"), true);
             }
         }
         self.tray(NIM_MODIFY);
@@ -330,7 +330,7 @@ fn show_menu(hwnd: HWND) {
         let check = if enabled { MF_CHECKED } else { MF_UNCHECKED };
         let _ = AppendMenuW(menu, MF_STRING | check, ID_TOGGLE, w!("録画中"));
         let mic = with_app(|a| a.cfg.mic_audio).unwrap_or(false);
-        let _ = AppendMenuW(menu, MF_STRING | if mic { MF_CHECKED } else { MF_UNCHECKED }, ID_MIC, w!("Micrófono"));
+        let _ = AppendMenuW(menu, MF_STRING | if mic { MF_CHECKED } else { MF_UNCHECKED }, ID_MIC, w!("マイク"));
         let _ = AppendMenuW(menu, MF_STRING, ID_SETTINGS, w!("Clippyを開く"));
         let _ = AppendMenuW(menu, MF_SEPARATOR, 0, PCWSTR::null());
         let _ = AppendMenuW(menu, MF_STRING, ID_EXIT, w!("終了"));

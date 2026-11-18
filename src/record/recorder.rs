@@ -97,7 +97,7 @@ fn thread_main(mut cfg: Config, rx: Receiver<Cmd>, notify: Notify) {
                 match rx.recv_timeout(Duration::from_secs(3)) {
                     Ok(Cmd::Stop) | Err(RecvTimeoutError::Disconnected) => break,
                     Ok(Cmd::Update(c)) => cfg = c,
-                    Ok(Cmd::Save) => notify(Event::SaveFailed("Clippy no está grabando en este momento".into())),
+                    Ok(Cmd::Save) => notify(Event::SaveFailed("Clippyは現在録画していません".into())),
                     Err(RecvTimeoutError::Timeout) => {}
                 }
             }
@@ -105,7 +105,7 @@ fn thread_main(mut cfg: Config, rx: Receiver<Cmd>, notify: Notify) {
     }
 }
 
-/// Lo que tarda el aviso de "clip guardado" en empezar a sonar y llegar a la captura (100 ns):
+/// Lo que tarda el aviso de "クリップを保存しました" en empezar a sonar y llegar a la captura (100 ns):
 /// se silencia en el canal escritorio junto con el sonido.
 const SOUND_LATENCY: i64 = 2_050_000;
 
@@ -176,7 +176,7 @@ struct AudioState {
     mic: Channel,
     game: game::Detector,
     next_check: i64,
-    /// Ventanas (100 ns) donde sonó el aviso de "clip guardado": se silencian en el canal escritorio.
+    /// Ventanas (100 ns) donde sonó el aviso de "クリップを保存しました": se silencian en el canal escritorio.
     masks: Vec<(i64, i64)>,
 }
 
@@ -194,14 +194,14 @@ impl AudioState {
         let pid = self.game.pid();
         let game = pid.filter(|_| cfg.game_audio).map(Source::Only);
         self.game_ch.sync(game, None, now, "juego");
-        self.mic.sync(cfg.mic_audio.then(|| Source::Mic(cfg.mic_device.clone())), None, now, "micrófono");
+        self.mic.sync(cfg.mic_audio.then(|| Source::Mic(cfg.mic_device.clone())), None, now, "マイク");
         // Escritorio = todo menos el juego; si no se puede excluir al juego, todo el sistema.
         let (desk, fallback) = match pid {
             Some(p) => (Source::AllBut(p), Some(Source::System)),
             None => (Source::System, None),
         };
         let on = cfg.desktop_audio;
-        self.desktop.sync(on.then_some(desk), fallback.filter(|_| on), now, "escritorio");
+        self.desktop.sync(on.then_some(desk), fallback.filter(|_| on), now, "デスクトップ");
     }
 }
 
@@ -275,7 +275,7 @@ fn session(cfg: &mut Config, rx: &Receiver<Cmd>, notify: &Notify, restarted: Opt
         let now = now_100ns() - t0;
         if au.game.poll(now) {
             let name = au.game.name();
-            log(&format!("juego detectado: {}", name.as_deref().unwrap_or("ninguno")));
+            log(&format!("juego detectado: {}", name.as_deref().unwrap_or("なし")));
             notify(Event::Game(name));
         }
         if now >= next_aim {
@@ -396,13 +396,13 @@ fn save_clip(cfg: &Config, packets: &VecDeque<Packet>, enc: &Encoder, au: &Audio
         notify(Event::SaveFailed(m.into()));
         false
     };
-    let Some(video_type) = enc.type_blob() else { return fail("todavía no hay video en el buffer") };
+    let Some(video_type) = enc.type_blob() else { return fail("バッファにまだビデオがありません") };
     let min = now - keep;
     let start = packets
         .iter()
         .rposition(|p| p.key && p.pts <= min)
         .or_else(|| packets.iter().position(|p| p.key));
-    let Some(start) = start else { return fail("todavía no hay video en el buffer") };
+    let Some(start) = start else { return fail("バッファにまだビデオがありません") };
     let pk: Vec<Packet> = packets.iter().skip(start).cloned().collect();
     log(&format!("clip: {} cuadros, {} fotogramas clave", pk.len(), pk.iter().filter(|p| p.key).count()));
     let base = pk[0].pts;
@@ -410,7 +410,7 @@ fn save_clip(cfg: &Config, packets: &VecDeque<Packet>, enc: &Encoder, au: &Audio
     let audio = cfg.audio_on().then(|| mixed_audio(cfg, au, frames_at(base), frames_at(end)));
     if au.game.pid().is_none() {
         if cfg.game_audio {
-            log("clip sin canal de juego: no se detectó ningún juego");
+            log("ゲームチャンネルなし: ゲームが検出されませんでした");
         }
         if cfg.capture_mode == CaptureMode::GamesOnly {
             log("clip en negro: el modo \"Solo juegos\" no detectó ningún juego en pantalla completa");

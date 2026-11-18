@@ -118,7 +118,7 @@ impl SettingsApp {
             ui.add(egui::Label::new(RichText::new(format!("No se pudo actualizar: {e}")).size(12.0).color(DANGER)).wrap());
         }
         let label = if busy { format!("Bajando la {v}…") } else { format!("{v} に更新") };
-        let tip = format!("Tenés la {}.", update::current());
+        let tip = format!("現在のバージョンは {} です。", update::current());
         let size = egui::vec2(ui.available_width(), 36.0);
         let r = ui.add_enabled_ui(!busy, |ui| icon_button(ui, Glyph::Download, &label, Kind::Secondary, size)).inner;
         // Primero se confirma, viendo qué trae la versión nueva.
@@ -171,7 +171,7 @@ impl SettingsApp {
                             (n, last) => format!(
                                 "{} {} · el último {}",
                                 fmt_count(n),
-                                if n == 1 { "clip guardado" } else { "clips guardados" },
+                                if n == 1 { "クリップを保存しました" } else { "clips guardados" },
                                 last.map(ago).unwrap_or_default()
                             ),
                         };
@@ -238,10 +238,10 @@ impl SettingsApp {
             });
             hint(ui, LABEL_W + 8.0, format!("キーを押す前の直近 {} を保存します。", fmt_secs(self.cfg.seconds)));
             divider(ui);
-            row(ui, "Calidad", LABEL_W, |ui| {
-                // 0 = "Personalizada": se elige el bitrate a mano.
+            row(ui, "画質", LABEL_W, |ui| {
+                // 0 = "カスタム": se elige el bitrate a mano.
                 let mut q = if self.custom_quality || !QUALITY.contains(&self.cfg.bitrate_mbps) { 0 } else { self.cfg.bitrate_mbps };
-                if seg(ui, &mut q, &[(QUALITY[0], "Baja"), (QUALITY[1], "Media"), (QUALITY[2], "Alta"), (0, "Personalizada")]) {
+                if seg(ui, &mut q, &[(QUALITY[0], "Baja"), (QUALITY[1], "Media"), (QUALITY[2], "Alta"), (0, "カスタム")]) {
                     self.custom_quality = q == 0;
                     if q != 0 {
                         self.cfg.bitrate_mbps = q;
@@ -255,19 +255,19 @@ impl SettingsApp {
                 });
                 hint(ui, LABEL_W + 8.0, "Más Mbps, mejor imagen y clips más pesados. A 1080p y 60 fps, 40 a 60 ya se ve muy bien; a 1440p o 4K, conviene 80 o más.");
             }
-            row(ui, "Resolución", LABEL_W, |ui| {
-                let labels = RESOLUTIONS.map(|r| if r == 0 { "Como el monitor".to_string() } else { format!("{r}p") });
+            row(ui, "解像度", LABEL_W, |ui| {
+                let labels = RESOLUTIONS.map(|r| if r == 0 { "モニターと同じ".to_string() } else { format!("{r}p") });
                 let opts: Vec<(u32, &str)> = RESOLUTIONS.iter().zip(&labels).map(|(&r, l)| (r, l.as_str())).collect();
                 seg(ui, &mut self.cfg.resolution, &opts);
             });
             hint(ui, LABEL_W + 8.0, "Con la forma de tu monitor: si jugás con resolución estirada, el clip sale estirado como lo ves. Menos resolución, clips más livianos.");
-            row(ui, "Cuadros por segundo", LABEL_W, |ui| {
+            row(ui, "フレームレート", LABEL_W, |ui| {
                 seg(ui, &mut self.cfg.fps, &[(30, "30"), (60, "60"), (120, "120")]);
             });
             hint(ui, LABEL_W + 8.0, "Video MP4 (H.264): se reproduce en cualquier PC, celular, Discord o WhatsApp.");
             divider(ui);
-            row(ui, "Qué se graba", LABEL_W, |ui| {
-                seg(ui, &mut self.cfg.capture_mode, &[(CaptureMode::Screen, "Toda la pantalla"), (CaptureMode::GamesOnly, "Solo juegos")]);
+            row(ui, "録画対象", LABEL_W, |ui| {
+                seg(ui, &mut self.cfg.capture_mode, &[(CaptureMode::Screen, "画面全体"), (CaptureMode::GamesOnly, "ゲームのみ")]);
             });
             hint(
                 ui,
@@ -284,11 +284,11 @@ impl SettingsApp {
             });
             hint(ui, LABEL_W + 8.0, "Aproximado, como lo muestra el Administrador de tareas. Sube un poco con más segundos, más calidad o mucho movimiento en pantalla.");
             divider(ui);
-            row(ui, "Carpeta", LABEL_W, |ui| {
+            row(ui, "フォルダ", LABEL_W, |ui| {
                 ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                    if button(ui, "Cambiar", Kind::Secondary).clicked() {
+                    if button(ui, "変更", Kind::Secondary).clicked() {
                         if let Some(p) = rfd::FileDialog::new()
-                            .set_title("Carpeta para los clips")
+                            .set_title("クリップの保存先")
                             .set_directory(&self.cfg.output_dir)
                             .pick_folder()
                         {
@@ -316,13 +316,13 @@ impl SettingsApp {
                     let (vk, mods) = self.cfg.hotkey(a);
                     let capturing = self.capturing == Some(a);
                     ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                        if optional && vk != 0 && !capturing && button(ui, "Quitar", Kind::Ghost).clicked() {
+                        if optional && vk != 0 && !capturing && button(ui, "削除", Kind::Ghost).clicked() {
                             let (v, m) = self.cfg.hotkey_mut(a);
                             *v = 0;
                             *m = 0;
                         }
                         let text = if capturing {
-                            "Apretá una tecla…".to_string()
+                            "キーを押してください…".to_string()
                         } else if vk == 0 {
                             "Sin asignar".to_string()
                         } else {
@@ -360,11 +360,11 @@ impl SettingsApp {
                 },
             );
             divider(ui);
-            volume_row(ui, "Escritorio", &mut self.cfg.desktop_audio, &mut self.cfg.desktop_volume);
+            volume_row(ui, "デスクトップ", &mut self.cfg.desktop_audio, &mut self.cfg.desktop_volume);
             hint(ui, LABEL_W + 8.0, "Todo lo demás: Discord, música, navegador.");
             divider(ui);
-            row(ui, "Micrófono", LABEL_W, |ui| {
-                toggle(ui, &mut self.cfg.mic_audio).on_hover_text(if self.cfg.mic_audio { "Apagar micrófono" } else { "Grabar tu voz" });
+            row(ui, "マイク", LABEL_W, |ui| {
+                toggle(ui, &mut self.cfg.mic_audio).on_hover_text(if self.cfg.mic_audio { "マイクをオフ" } else { "自分の声を録音" });
                 ui.add_space(8.0);
                 ui.add_enabled_ui(self.cfg.mic_audio, |ui| {
                     ui.spacing_mut().slider_width = (ui.available_width() - 86.0).max(60.0);
@@ -378,9 +378,9 @@ impl SettingsApp {
                             self.mics = audio::capture_devices();
                         }
                         let current = if self.cfg.mic_device.is_empty() {
-                            "Predeterminado de Windows".to_string()
+                            "Windowsの既定".to_string()
                         } else {
-                            self.mics.iter().find(|(id, _)| *id == self.cfg.mic_device).map(|(_, n)| n.clone()).unwrap_or_else(|| "Micrófono desconectado".into())
+                            self.mics.iter().find(|(id, _)| *id == self.cfg.mic_device).map(|(_, n)| n.clone()).unwrap_or_else(|| "マイクが接続されていません".into())
                         };
                         let w = ui.available_width();
                         egui::ComboBox::from_id_salt("mic")
@@ -388,7 +388,7 @@ impl SettingsApp {
                             .truncate()
                             .selected_text(current.clone())
                             .show_ui(ui, |ui| {
-                                ui.selectable_value(&mut self.cfg.mic_device, String::new(), "Predeterminado de Windows");
+                                ui.selectable_value(&mut self.cfg.mic_device, String::new(), "Windowsの既定");
                                 for (id, name) in self.mics.clone() {
                                     ui.selectable_value(&mut self.cfg.mic_device, id, name);
                                 }
@@ -434,7 +434,7 @@ impl SettingsApp {
 /// Fila de audio: interruptor + volumen + porcentaje.
 fn volume_row(ui: &mut egui::Ui, label: &str, on: &mut bool, vol: &mut u32) {
     row(ui, label, LABEL_W, |ui| {
-        toggle(ui, on).on_hover_text(if *on { "Silenciar" } else { "Activar" });
+        toggle(ui, on).on_hover_text(if *on { "Silenciar" } else { "オン" });
         ui.add_space(8.0);
         ui.add_enabled_ui(*on, |ui| {
             ui.spacing_mut().slider_width = (ui.available_width() - 86.0).max(60.0);

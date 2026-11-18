@@ -3,7 +3,7 @@
 //!   (la fecha queda en update.json). Si falla, se reintenta a la hora, no en cada arranque.
 //! - La grabadora la revisa al arrancar y cada hora (puede quedar abierta semanas).
 //! - Si hay versión nueva se avisa (globo de la bandeja y aviso en la ventana principal).
-//! - Al tocar "Actualizar" se descarga el .exe nuevo y se reemplaza el actual solo.
+//! - Al tocar "更新" se descarga el .exe nuevo y se reemplaza el actual solo.
 //! - Después de actualizar, la ventana principal muestra una vez el texto del release (novedades).
 
 use std::path::{Path, PathBuf};
@@ -201,7 +201,7 @@ fn fetch_latest() -> Result<(String, String, Option<String>)> {
         .assets
         .into_iter()
         .find(|a| a.name.eq_ignore_ascii_case("Clippy.exe"))
-        .ok_or_else(|| anyhow!("la versión no tiene Clippy.exe"))?;
+        .ok_or_else(|| anyhow!("バージョンに Clippy.exe がありません"))?;
     Ok((r.tag_name, a.browser_download_url, r.body))
 }
 
@@ -219,7 +219,7 @@ fn old_path(exe: &Path) -> PathBuf {
 pub fn download(url: &str) -> Result<PathBuf> {
     let data = http_get(url)?;
     if data.len() < 1_000_000 || &data[..2] != b"MZ" {
-        bail!("la descarga no es un programa válido");
+        bail!("ダウンロードは有効なプログラムではありません");
     }
     let p = downloaded_path();
     std::fs::write(&p, data)?;
@@ -244,18 +244,18 @@ pub fn apply(target: &Path) -> i32 {
         std::thread::sleep(Duration::from_millis(100));
     }
     let Ok(me) = std::env::current_exe() else {
-        log("actualizar: no se encontró el programa descargado");
+        log("更新: ダウンロードしたプログラムが見つかりません");
         return 1;
     };
     let old = old_path(target);
     let _ = std::fs::remove_file(&old);
     // Windows deja renombrar un .exe en uso, así que esto funciona aunque algo siga abierto.
     if let Err(e) = std::fs::rename(target, &old) {
-        log(&format!("actualizar: no se pudo mover la versión anterior: {e}"));
+        log(&format!("更新: 以前のバージョンを移動できませんでした: {e}"));
         return 1;
     }
     if let Err(e) = std::fs::copy(&me, target) {
-        log(&format!("actualizar: no se pudo copiar la versión nueva: {e}"));
+        log(&format!("更新: 新しいバージョンをコピーできませんでした: {e}"));
         let _ = std::fs::rename(&old, target);
         return 1;
     }
@@ -302,7 +302,7 @@ fn http_get(url: &str) -> Result<Vec<u8>> {
     unsafe {
         let session = Handle(WinHttpOpen(w!("Clippy-Updater"), WINHTTP_ACCESS_TYPE_AUTOMATIC_PROXY, PCWSTR::null(), PCWSTR::null(), 0));
         if session.0.is_null() {
-            bail!("no se pudo iniciar WinHTTP");
+            bail!("WinHTTP を開始できませんでした");
         }
         let conn = Handle(WinHttpConnect(session.0, &HSTRING::from(host), INTERNET_DEFAULT_HTTPS_PORT, 0));
         if conn.0.is_null() {
@@ -318,7 +318,7 @@ fn http_get(url: &str) -> Result<Vec<u8>> {
             WINHTTP_FLAG_SECURE,
         ));
         if req.0.is_null() {
-            bail!("no se pudo crear la consulta");
+            bail!("クエリを作成できませんでした");
         }
         let headers: Vec<u16> = "Accept: application/vnd.github+json\r\n".encode_utf16().collect();
         WinHttpSendRequest(req.0, Some(&headers), None, 0, 0, 0)?;
@@ -336,8 +336,8 @@ fn http_get(url: &str) -> Result<Vec<u8>> {
         )?;
         match status {
             200 => {}
-            403 | 429 => bail!("GitHub está limitando las consultas desde tu conexión. Probá de nuevo en un rato"),
-            _ => bail!("el servidor respondió {status}"),
+            403 | 429 => bail!("GitHubが接続を制限しています。しばらくしてから再試行してください"),
+            _ => bail!("サーバーが {status} を返しました"),
         }
         let mut body = Vec::new();
         loop {

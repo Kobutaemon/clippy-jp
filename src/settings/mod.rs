@@ -76,7 +76,7 @@ struct SettingsApp {
     maximized: bool,
     page: Page,
     confirm_quit: bool,
-    /// Se eligió "Personalizada" en la calidad (aunque el valor coincida con uno de los fijos).
+    /// Se eligió "カスタム" en la calidad (aunque el valor coincida con uno de los fijos).
     custom_quality: bool,
 }
 

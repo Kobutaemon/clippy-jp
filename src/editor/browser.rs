@@ -70,7 +70,7 @@ fn asset_card(ui: &mut egui::Ui, rect: Rect, a: &Asset, info: Option<&library::I
     match info.and_then(|i| i.cover.as_ref()) {
         Some(t) => shapes.push(Shape::image(t.id(), thumb, Rect::from_min_max(Pos2::ZERO, Pos2::new(1.0, 1.0)), Color32::WHITE)),
         None => {
-            let msg = if info.and_then(|i| i.error.as_ref()).is_some() { "No se puede leer" } else { "読み込み中…" };
+            let msg = if info.and_then(|i| i.error.as_ref()).is_some() { "読み取れません" } else { "読み込み中…" };
             shapes.push(ui.fonts(|f| Shape::text(f, thumb.center(), Align2::CENTER_CENTER, msg, FontId::proportional(12.0), MUTED)));
         }
     }
@@ -383,7 +383,7 @@ impl EditorApp {
                         });
                     }
                     ui.separator();
-                    let del = if imported == n { "Quitar de la biblioteca" } else { "削除…" };
+                    let del = if imported == n { "ライブラリから削除" } else { "削除…" };
                     if ui.button(RichText::new(del).color(DANGER)).clicked() {
                         todo.push(Do::Dialog(Dialog::Delete(paths.clone())));
                         ui.close_menu();
@@ -571,9 +571,9 @@ impl EditorApp {
                 let used = paths.iter().filter(|p| self.is_used(p)).count();
                 let title = match (own, n) {
                     (0, 1) => "¿Quitar este video de la biblioteca?".to_string(),
-                    (0, _) => format!("¿Quitar {} de la biblioteca?", count(n, "video", "videos")),
-                    (_, 1) => "¿Eliminar este clip?".to_string(),
-                    _ => format!("¿Eliminar {}?", count(n, "video", "videos")),
+                    (0, _) => format!("{} をライブラリから削除しますか？", count(n, "video", "videos")),
+                    (_, 1) => "このクリップを削除しますか？".to_string(),
+                    _ => format!("{} を削除しますか？", count(n, "video", "videos")),
                 };
                 let mut lines = Vec::new();
                 if own == 1 {
@@ -588,7 +588,7 @@ impl EditorApp {
                 if used > 0 && own > 0 {
                     lines.push(if used == 1 { "タイムラインにあります。そこからも削除されます。".to_string() } else { format!("{} 件はタイムラインにあります。そこからも削除されます。", fmt_count(used)) });
                 }
-                let ok = if own == 0 { "Quitar" } else { "削除" };
+                let ok = if own == 0 { "削除" } else { "削除" };
                 confirm(ctx, &title, &lines, ok, &mut action)
             }
             Dialog::DeleteFolder(dir) => {
@@ -603,7 +603,7 @@ impl EditorApp {
                 if used > 0 {
                     lines.push(format!("{} 件はタイムラインにあります。そこからも削除されます。", if used == 1 { "Uno está".to_string() } else { format!("{} están", fmt_count(used)) }));
                 }
-                confirm(ctx, &format!("¿Eliminar la carpeta «{name}»?"), &lines, "削除", &mut action)
+                confirm(ctx, &format!("フォルダ「{name}」を削除しますか？"), &lines, "削除", &mut action)
             }
             Dialog::Name { name, rename, error, .. } => {
                 let title = if rename.is_some() { "名前を変更" } else { "新しいフォルダ" };

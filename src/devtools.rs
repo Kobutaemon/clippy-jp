@@ -2,7 +2,7 @@
 //!
 //! - `--test <segundos> <carpeta> [game|desktop|mic|juegos]`: graba, guarda un clip y sale.
 //! - `--test-mic`: cuánto audio entrega cada micrófono en 3 s.
-//! - `--test-download`: descarga la versión publicada como el botón "Actualizar".
+//! - `--test-download`: descarga la versión publicada como el botón "更新".
 //! - `--test-export`, `--test-frame`, `--test-strip`, `--test-covers`: ver `editor::devtools`.
 
 use std::sync::Arc;
@@ -26,7 +26,7 @@ pub fn run(args: &[String]) -> Option<i32> {
 }
 
 fn test_download() -> i32 {
-    // Prueba: descargar la versión publicada como lo hace el botón "Actualizar".
+    // Prueba: descargar la versión publicada como lo hace el botón "更新".
     let url = crate::app::update::load().url.unwrap_or_default();
     match crate::app::update::download(&url) {
         Ok(p) => println!("OK {} ({} bytes)", p.display(), std::fs::metadata(&p).map(|m| m.len()).unwrap_or(0)),
@@ -110,7 +110,7 @@ fn test_mode(args: &[String]) -> i32 {
     while std::time::Instant::now() < deadline {
         match rx.recv_timeout(Duration::from_millis(200)) {
             Ok(crate::record::recorder::Event::Started(n)) => println!("encoder: {n}"),
-            Ok(crate::record::recorder::Event::Game(g)) => println!("juego: {}", g.as_deref().unwrap_or("ninguno")),
+            Ok(crate::record::recorder::Event::Game(g)) => println!("juego: {}", g.as_deref().unwrap_or("なし")),
             Ok(crate::record::recorder::Event::Saved(p)) => {
                 println!("OK {}", p.display());
                 return 0;

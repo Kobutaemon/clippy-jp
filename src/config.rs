@@ -40,7 +40,7 @@ impl From<CaptureMode> for &'static str {
 }
 
 pub const MAX_SECONDS: u32 = 300;
-/// Calidad de video (Mbps) que se puede elegir a mano en "Personalizada".
+/// Calidad de video (Mbps) que se puede elegir a mano en "カスタム".
 pub const MIN_MBPS: u32 = 5;
 pub const MAX_MBPS: u32 = 150;
 /// Resoluciones del clip que se pueden elegir (lado corto en px; 0 = como el monitor).
