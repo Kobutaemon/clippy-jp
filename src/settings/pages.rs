@@ -241,7 +241,7 @@ impl SettingsApp {
             row(ui, "画質", LABEL_W, |ui| {
                 // 0 = "カスタム": se elige el bitrate a mano.
                 let mut q = if self.custom_quality || !QUALITY.contains(&self.cfg.bitrate_mbps) { 0 } else { self.cfg.bitrate_mbps };
-                if seg(ui, &mut q, &[(QUALITY[0], "Baja"), (QUALITY[1], "Media"), (QUALITY[2], "Alta"), (0, "カスタム")]) {
+                if seg(ui, &mut q, &[(QUALITY[0], "低"), (QUALITY[1], "中"), (QUALITY[2], "高"), (0, "カスタム")]) {
                     self.custom_quality = q == 0;
                     if q != 0 {
                         self.cfg.bitrate_mbps = q;
@@ -253,18 +253,18 @@ impl SettingsApp {
                     ui.spacing_mut().slider_width = (ui.available_width() - 104.0).max(80.0);
                     ui.add(egui::Slider::new(&mut self.cfg.bitrate_mbps, MIN_MBPS..=MAX_MBPS).suffix(" Mbps"));
                 });
-                hint(ui, LABEL_W + 8.0, "Más Mbps, mejor imagen y clips más pesados. A 1080p y 60 fps, 40 a 60 ya se ve muy bien; a 1440p o 4K, conviene 80 o más.");
+                hint(ui, LABEL_W + 8.0, "Mbpsが高いほど画質が良く、ファイルサイズも大きくなります。1080p/60fpsなら40〜60で十分きれいです。1440pや4Kなら80以上がおすすめです。");
             }
             row(ui, "解像度", LABEL_W, |ui| {
                 let labels = RESOLUTIONS.map(|r| if r == 0 { "モニターと同じ".to_string() } else { format!("{r}p") });
                 let opts: Vec<(u32, &str)> = RESOLUTIONS.iter().zip(&labels).map(|(&r, l)| (r, l.as_str())).collect();
                 seg(ui, &mut self.cfg.resolution, &opts);
             });
-            hint(ui, LABEL_W + 8.0, "Con la forma de tu monitor: si jugás con resolución estirada, el clip sale estirado como lo ves. Menos resolución, clips más livianos.");
+            hint(ui, LABEL_W + 8.0, "モニターの形状に合わせます。引き伸ばし解像度でプレイするとクリップも引き伸ばされます。解像度を下げるとファイルサイズが小さくなります。");
             row(ui, "フレームレート", LABEL_W, |ui| {
                 seg(ui, &mut self.cfg.fps, &[(30, "30"), (60, "60"), (120, "120")]);
             });
-            hint(ui, LABEL_W + 8.0, "Video MP4 (H.264): se reproduce en cualquier PC, celular, Discord o WhatsApp.");
+            hint(ui, LABEL_W + 8.0, "動画はMP4 (H.264)です。PC、スマホ、Discord、WhatsAppなどどこでも再生できます。");
             divider(ui);
             row(ui, "録画対象", LABEL_W, |ui| {
                 seg(ui, &mut self.cfg.capture_mode, &[(CaptureMode::Screen, "画面全体"), (CaptureMode::GamesOnly, "ゲームのみ")]);
@@ -273,16 +273,16 @@ impl SettingsApp {
                 ui,
                 LABEL_W + 8.0,
                 if self.cfg.capture_mode == CaptureMode::GamesOnly {
-                    "Graba solo el juego en pantalla completa, en el monitor donde esté. Si lo minimizás o lo tapás con otra ventana, esa parte del clip queda en negro y no se ve tu escritorio."
+                    "フルスクリーンのゲームだけを、そのモニターで録画します。最小化したり他のウィンドウで隠したりすると、その部分は黒くなりデスクトップは映りません。"
                 } else {
-                    "Graba todo lo que se ve en el monitor del juego (sin juego, el de la ventana activa): juegos, escritorio y otras ventanas."
+                    "ゲームがあるモニター（ゲームがない場合はアクティブウィンドウのモニター）に表示されているものすべてを録画します。ゲーム、デスクトップ、その他のウィンドウが含まれます。"
                 },
             );
             divider(ui);
-            row(ui, "Memoria", LABEL_W, |ui| {
-                ui.label(RichText::new(format!("Unos {} MB de RAM mientras graba", self.cfg.typical_ram_mb())).family(bold()).color(TEXT));
+            row(ui, "メモリ", LABEL_W, |ui| {
+                ui.label(RichText::new(format!("録画中は約 {} MB の RAM", self.cfg.typical_ram_mb())).family(bold()).color(TEXT));
             });
-            hint(ui, LABEL_W + 8.0, "Aproximado, como lo muestra el Administrador de tareas. Sube un poco con más segundos, más calidad o mucho movimiento en pantalla.");
+            hint(ui, LABEL_W + 8.0, "タスクマネージャーの表示に近い概算です。クリップが長い、画質が高い、画面の動きが多いと少し増えます。");
             divider(ui);
             row(ui, "フォルダ", LABEL_W, |ui| {
                 ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
@@ -324,7 +324,7 @@ impl SettingsApp {
                         let text = if capturing {
                             "キーを押してください…".to_string()
                         } else if vk == 0 {
-                            "Sin asignar".to_string()
+                            "未割り当て".to_string()
                         } else {
                             hotkey_name(vk, mods)
                         };
@@ -341,27 +341,27 @@ impl SettingsApp {
             } else if let Some(n) = &self.global_note {
                 n.clone()
             } else {
-                "Los atajos del editor se cambian desde el editor, en «Ajustes del editor» (la tuerca).".to_string()
+                "エディタのショートカットは、エディタ内の「エディタの設定」（歯車アイコン）から変更できます。".to_string()
             };
             ui.label(RichText::new(note).size(12.5).color(MUTED));
         });
     }
 
     fn audio_section(&mut self, ui: &mut egui::Ui) {
-        section(ui, "Audio", |ui| {
-            volume_row(ui, "Juego", &mut self.cfg.game_audio, &mut self.cfg.game_volume);
+        section(ui, "オーディオ", |ui| {
+            volume_row(ui, "ゲーム", &mut self.cfg.game_audio, &mut self.cfg.game_volume);
             hint(
                 ui,
                 LABEL_W + 8.0,
                 if self.cfg.game_audio {
-                    "Se detecta solo: el juego que tengas en pantalla completa. Mientras no haya uno, todo va a Escritorio."
+                    "フルスクリーンのゲームを自動検出します。ゲームがない間はすべてデスクトップに入ります。"
                 } else {
-                    "Silenciado: el juego no se va a escuchar en los clips."
+                    "ミュート: ゲームの音声はクリップに入りません。"
                 },
             );
             divider(ui);
             volume_row(ui, "デスクトップ", &mut self.cfg.desktop_audio, &mut self.cfg.desktop_volume);
-            hint(ui, LABEL_W + 8.0, "Todo lo demás: Discord, música, navegador.");
+            hint(ui, LABEL_W + 8.0, "その他すべて: Discord、音楽、ブラウザなど。");
             divider(ui);
             row(ui, "マイク", LABEL_W, |ui| {
                 toggle(ui, &mut self.cfg.mic_audio).on_hover_text(if self.cfg.mic_audio { "マイクをオフ" } else { "自分の声を録音" });
@@ -401,24 +401,24 @@ impl SettingsApp {
             hint(
                 ui,
                 LABEL_W + 8.0,
-                if self.cfg.mic_audio { "Tu voz se mezcla en el clip. También lo podés prender o apagar desde el ícono de la bandeja." } else { "Apagado: tu voz no queda en los clips." },
+                if self.cfg.mic_audio { "自分の声がクリップにミックスされます。トレイアイコンからもオン/オフできます。" } else { "オフ: 自分の声はクリップに入りません。" },
             );
 
         });
     }
 
     pub(super) fn general_section(&mut self, ui: &mut egui::Ui) {
-        section(ui, "Preferencias", |ui| {
-            row(ui, "Sonido al guardar", LABEL_W, |ui| {
+        section(ui, "基本設定", |ui| {
+            row(ui, "保存時のサウンド", LABEL_W, |ui| {
                 ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
                     toggle(ui, &mut self.cfg.sound_on_save);
-                    if button(ui, "Probar sonido", Kind::Secondary).clicked() {
+                    if button(ui, "サウンドを試す", Kind::Secondary).clicked() {
                         sound::play_saved();
                     }
                 });
             });
             divider(ui);
-            row(ui, "Iniciar con Windows", LABEL_W, |ui| {
+            row(ui, "Windows起動時に開始", LABEL_W, |ui| {
                 ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
                     let mut a = self.autostart;
                     if toggle(ui, &mut a).changed() {
@@ -434,7 +434,7 @@ impl SettingsApp {
 /// Fila de audio: interruptor + volumen + porcentaje.
 fn volume_row(ui: &mut egui::Ui, label: &str, on: &mut bool, vol: &mut u32) {
     row(ui, label, LABEL_W, |ui| {
-        toggle(ui, on).on_hover_text(if *on { "Silenciar" } else { "オン" });
+        toggle(ui, on).on_hover_text(if *on { "ミュート" } else { "オン" });
         ui.add_space(8.0);
         ui.add_enabled_ui(*on, |ui| {
             ui.spacing_mut().slider_width = (ui.available_width() - 86.0).max(60.0);
