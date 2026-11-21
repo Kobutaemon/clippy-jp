@@ -65,6 +65,8 @@ pub struct Config {
     /// Audio del escritorio (todo lo demás: Discord, música, etc.).
     pub desktop_audio: bool,
     pub desktop_volume: u32,
+    /// Dispositivo de salida para el audio de escritorio (vacío = predeterminado de Windows). Permite seleccionar un dispositivo virtual (ej. MixAmp) para excluir voces de Discord.
+    pub desktop_device: String,
     /// Micrófono (apagado por defecto). `mic_device` vacío = el predeterminado de Windows.
     pub mic_audio: bool,
     pub mic_volume: u32,
@@ -129,6 +131,7 @@ impl Default for Config {
             game_volume: 100,
             desktop_audio: true,
             desktop_volume: 100,
+            desktop_device: String::new(),
             mic_audio: false,
             mic_volume: 100,
             mic_device: String::new(),
