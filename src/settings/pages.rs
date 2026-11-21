@@ -1,1 +1,486 @@
-PLACEHOLDER_PAGES
+//! Páginas de la ventana principal: navegación, Inicio (grabación y audio), Atajos y General.
+
+use std::time::SystemTime;
+
+use eframe::egui::{self, Align, Layout, Margin, RichText};
+
+use crate::app::autostart;
+use crate::app::keys::hotkey_name;
+use crate::app::mode::Mode;
+use crate::app::update;
+use crate::config::{CaptureMode, GlobalAction, MAX_MBPS, MAX_SECONDS, MIN_MBPS, RESOLUTIONS};
+
+/// Calidades de video de un toque (Mbps): baja, media y alta.
+const QUALITY: [u32; 3] = [15, 30, 60];
+use crate::log::app_dir;
+use crate::record::audio;
+use crate::ui_kit::sound;
+use crate::ui_kit::theme::*;
+use crate::ui_kit::window::open_folder;
+
+use super::{Page, SettingsApp, CAPTURE_HINT, LABEL_W};
+
+pub(super) fn page_title(ui: &mut egui::Ui, title: &str, sub: &str) {
+    ui.label(RichText::new(title).family(bold()).size(26.0).color(TEXT));
+    ui.label(RichText::new(sub).color(MUTED));
+    ui.add_space(14.0);
+}
+
+impl SettingsApp {
+    /// Barra lateral: logo, estado de la grabación, secciones y acceso al editor.
+    pub(super) fn nav(&mut self, ui: &mut egui::Ui) {
+        ui.horizontal(|ui| {
+            app_mark(ui, 28.0);
+            ui.label(RichText::new("Clippy").family(bold()).size(20.0).color(TEXT));
+        });
+        ui.add_space(16.0);
+
+        egui::Frame::none().fill(BG).stroke(egui::Stroke::new(1.0_f32, LINE)).rounding(8.0).inner_margin(Margin::same(12.0)).show(ui, |ui| {
+            ui.set_width(ui.available_width());
+            if self.main_running {
+                ui.horizontal(|ui| {
+                    let (txt, col) = if self.cfg.enabled { ("録画中", TEXT) } else { ("一時停止中", MUTED) };
+                    let (r, _) = ui.allocate_exact_size(egui::vec2(10.0, 10.0), egui::Sense::hover());
+                    ui.painter().circle_filled(r.center(), 4.0, col);
+                    ui.label(RichText::new(txt).family(bold()).color(col));
+                    ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+                        toggle(ui, &mut self.cfg.enabled).on_hover_text(if self.cfg.enabled { "一時停止" } else { "再開" });
+                    });
+                });
+                let sub = if self.cfg.enabled {
+                    format!("{} guarda los últimos {}", hotkey_name(self.cfg.hotkey_vk, self.cfg.hotkey_mods), fmt_secs(self.cfg.seconds))
+                } else {
+                    "何も保存されていません".into()
+                };
+                ui.label(RichText::new(sub).size(12.5).color(MUTED));
+            } else {
+                ui.label(RichText::new("レコーダーは停止中です").color(TEXT));
+                ui.add_space(4.0);
+                if wide_button(ui, "レコーダーを起動", Kind::Primary, 34.0).clicked() {
+                    Mode::Tray { background: false }.launch();
+                }
+            }
+        });
+        ui.add_space(16.0);
+
+        for (page, label) in [
+            (Page::Home, "ホーム"),
+            (Page::Keys, "ショートカット"),
+            (Page::General, "一般"),
+        ] {
+            if nav_item(ui, label, self.page == page).clicked() {
+                self.page = page;
+                self.end_capture();
+            }
+        }
+
+        ui.with_layout(Layout::bottom_up(Align::Min), |ui| {
+            if wide_button(ui, "Clippyを終了", Kind::Danger, 36.0).on_hover_text("録画を停止してすべて終了").clicked() {
+                self.confirm_quit = true;
+            }
+            ui.add_space(14.0);
+            divider(ui);
+            ui.add_space(14.0);
+            ui.scope(|ui| {
+                ui.spacing_mut().item_spacing.y = 8.0;
+                let w = ui.available_width();
+                if icon_button(ui, Glyph::Folder, "クリップの保存先", Kind::Secondary, egui::vec2(w, 36.0)).clicked() {
+                    open_folder(&self.cfg.output_dir);
+                }
+                // Un solo botón principal: con la grabadora cerrada, lo principal es abrirla.
+                let editor = if self.main_running { Kind::Primary } else { Kind::Secondary };
+                if icon_button(ui, Glyph::Film, "エディタを開く", editor, egui::vec2(w, 42.0)).clicked() {
+                    Mode::Editor(None).launch();
+                }
+                self.update_button(ui);
+            });
+        });
+    }
+
+    pub(super) fn home_page(&mut self, ui: &mut egui::Ui) {
+        page_title(ui, "ホーム", "クリップの録画方法。");
+        // Lo primero que se busca: con qué tecla se guarda un clip. Va arriba y se cambia ahí mismo.
+        self.clip_key_hero(ui);
+        ui.add_space(12.0);
+        self.editor_hero(ui);
+        ui.add_space(18.0);
+        self.recording_section(ui);
+        self.audio_section(ui);
+    }
+
+    /// Versión nueva: un botón más al pie de la barra lateral, del tamaño de los otros (como en
+    /// Discord o Medal), no un cartel. La bandeja ya avisa con una notificación.
+    fn update_button(&mut self, ui: &mut egui::Ui) {
+        let Some((v, _)) = self.update.clone() else { return };
+        let busy = self.update_busy();
+        // El pie se arma de abajo hacia arriba: lo primero que se agrega queda abajo del botón.
+        if let Some(Err(e)) = self.update_status.lock().unwrap().clone() {
+            ui.add(egui::Label::new(RichText::new(format!("No se pudo actualizar: {e}")).size(12.0).color(DANGER)).wrap());
+        }
+        let label = if busy { format!("Bajando la {v}…") } else { format!("{v} に更新") };
+        let tip = format!("現在のバージョンは {} です。", update::current());
+        let size = egui::vec2(ui.available_width(), 36.0);
+        let r = ui.add_enabled_ui(!busy, |ui| icon_button(ui, Glyph::Download, &label, Kind::Secondary, size)).inner;
+        // Primero se confirma, viendo qué trae la versión nueva.
+        if r.on_hover_text(&tip).on_disabled_hover_text(&tip).clicked() {
+            self.confirm_update = Some((v.clone(), update::notes(&v)));
+        }
+    }
+
+    /// Tarjeta principal: la tecla para guardar clips, dibujada como una tecla que se toca para cambiar.
+    fn clip_key_hero(&mut self, ui: &mut egui::Ui) {
+        let a = GlobalAction::SaveClip;
+        let (vk, mods) = self.cfg.hotkey(a);
+        let waiting = self.capturing == Some(a);
+        hero_card(ui, |ui| {
+                ui.horizontal(|ui| {
+                    ui.spacing_mut().item_spacing.x = 22.0;
+                    let text = if waiting { "押してください…".to_string() } else { hotkey_name(vk, mods) };
+                    if keycap(ui, &text, waiting).on_hover_text("タップしてキーを変更").clicked() {
+                        self.start_capture(a);
+                    }
+                    ui.vertical(|ui| {
+                        ui.spacing_mut().item_spacing.y = 4.0;
+                        ui.add_space(4.0);
+                        ui.label(RichText::new("クリップを保存するキー").family(bold()).size(20.0).color(TEXT));
+                        let sub = if waiting {
+                            format!("新しいキーを押してください。{CAPTURE_HINT}")
+                        } else {
+                            format!("いつでも（ゲーム中でも）{} を押すと、直近 {} が保存されます。", hotkey_name(vk, mods), fmt_secs(self.cfg.seconds))
+                        };
+                        ui.add(egui::Label::new(RichText::new(sub).color(MUTED)).wrap());
+                        let note = match &self.global_note {
+                            Some(n) if !waiting => n.clone(),
+                            _ => "キーをタップして変更。".to_string(),
+                        };
+                        ui.label(RichText::new(note).size(12.5).color(MUTED));
+                    });
+                });
+            });
+    }
+
+    /// Tarjeta destacada para abrir el editor.
+    fn editor_hero(&mut self, ui: &mut egui::Ui) {
+        hero_card(ui, |ui| {
+                ui.horizontal(|ui| {
+                    ui.vertical(|ui| {
+                        ui.label(RichText::new("クリップエディタ").family(bold()).size(17.0).color(TEXT));
+                        ui.label(RichText::new("クリップを切り取り、結合し、一つの動画に書き出せます。").color(MUTED));
+                        let info = match self.clips {
+                            (0, _) => "まだクリップが保存されていません。".to_string(),
+                            (n, last) => format!(
+                                "{} {} · el último {}",
+                                fmt_count(n),
+                                if n == 1 { "クリップを保存しました" } else { "clips guardados" },
+                                last.map(ago).unwrap_or_default()
+                            ),
+                        };
+                        ui.label(RichText::new(info).size(12.5).color(MUTED));
+                    });
+                    ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+                        if icon_button(ui, Glyph::Film, "エディタを開く", Kind::Secondary, egui::vec2(150.0, 40.0)).clicked() {
+                            Mode::Editor(None).launch();
+                        }
+                    });
+                });
+            });
+    }
+
+    pub(super) fn about_section(&mut self, ui: &mut egui::Ui) {
+        section(ui, "このアプリについて", |ui| {
+            row(ui, "バージョン", LABEL_W, |ui| {
+                ui.label(RichText::new(format!("Clippy {}", env!("CARGO_PKG_VERSION"))).color(TEXT));
+                ui.with_layout(Layout::right_to_left(Align::Center), |ui| match self.update.clone() {
+                    Some((v, _)) => {
+                        let busy = self.update_busy();
+                        let label = if busy { "更新中…".to_string() } else { format!("{v} に更新") };
+                        if ui.add_enabled_ui(!busy, |ui| button(ui, &label, Kind::Secondary)).inner.clicked() {
+                            self.start_update();
+                        }
+                    }
+                    None => {
+                        let label = if self.checking { "確認中…" } else { "更新を確認" };
+                        // Ancho fijo: al pasar a "確認中…" no se achica ni se corre.
+                        let size = egui::vec2(190.0, 0.0);
+                        if ui.add_enabled_ui(!self.checking, |ui| button_sized(ui, label, Kind::Secondary, size)).inner.clicked() {
+                            self.start_check();
+                        }
+                    }
+                });
+            });
+            self.finish_check(ui.ctx());
+            if let Some(note) = self.check_note.clone() {
+                hint(ui, LABEL_W + 8.0, note);
+            }
+            divider(ui);
+            row(ui, "データとログ", LABEL_W, |ui| {
+                ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+                    if icon_button(ui, Glyph::Folder, "フォルダを開く", Kind::Secondary, egui::Vec2::ZERO).clicked() {
+                        open_folder(&app_dir());
+                    }
+                    ui.with_layout(Layout::left_to_right(Align::Center), |ui| {
+                        ui.add(egui::Label::new(RichText::new(app_dir().display().to_string()).color(MUTED)).truncate());
+                    });
+                });
+            });
+        });
+    }
+
+    fn recording_section(&mut self, ui: &mut egui::Ui) {
+        section(ui, "録画", |ui| {
+            row(ui, "クリップの長さ", LABEL_W, |ui| {
+                ui.spacing_mut().slider_width = (ui.available_width() - 104.0).max(80.0);
+                ui.add(
+                    egui::Slider::new(&mut self.cfg.seconds, 5..=MAX_SECONDS)
+                        .step_by(5.0)
+                        .custom_formatter(|v, _| fmt_secs(v as u32)),
+                );
+            });
+            hint(ui, LABEL_W + 8.0, format!("キーを押す前の直近 {} を保存します。", fmt_secs(self.cfg.seconds)));
+            divider(ui);
+            row(ui, "画質", LABEL_W, |ui| {
+                // 0 = "カスタム": se elige el bitrate a mano.
+                let mut q = if self.custom_quality || !QUALITY.contains(&self.cfg.bitrate_mbps) { 0 } else { self.cfg.bitrate_mbps };
+                if seg(ui, &mut q, &[(QUALITY[0], "低"), (QUALITY[1], "中"), (QUALITY[2], "高"), (0, "カスタム")]) {
+                    self.custom_quality = q == 0;
+                    if q != 0 {
+                        self.cfg.bitrate_mbps = q;
+                    }
+                }
+            });
+            if self.custom_quality || !QUALITY.contains(&self.cfg.bitrate_mbps) {
+                row(ui, "", LABEL_W, |ui| {
+                    ui.spacing_mut().slider_width = (ui.available_width() - 104.0).max(80.0);
+                    ui.add(egui::Slider::new(&mut self.cfg.bitrate_mbps, MIN_MBPS..=MAX_MBPS).suffix(" Mbps"));
+                });
+                hint(ui, LABEL_W + 8.0, "Mbpsが高いほど画質が良く、ファイルサイズも大きくなります。1080p/60fpsなら40〜60で十分きれいです。1440pや4Kなら80以上がおすすめです。");
+            }
+            row(ui, "解像度", LABEL_W, |ui| {
+                let labels = RESOLUTIONS.map(|r| if r == 0 { "モニターと同じ".to_string() } else { format!("{r}p") });
+                let opts: Vec<(u32, &str)> = RESOLUTIONS.iter().zip(&labels).map(|(&r, l)| (r, l.as_str())).collect();
+                seg(ui, &mut self.cfg.resolution, &opts);
+            });
+            hint(ui, LABEL_W + 8.0, "モニターの形状に合わせます。引き伸ばし解像度でプレイするとクリップも引き伸ばされます。解像度を下げるとファイルサイズが小さくなります。");
+            row(ui, "フレームレート", LABEL_W, |ui| {
+                seg(ui, &mut self.cfg.fps, &[(30, "30"), (60, "60"), (120, "120")]);
+            });
+            hint(ui, LABEL_W + 8.0, "動画はMP4 (H.264)です。PC、スマホ、Discord、WhatsAppなどどこでも再生できます。");
+            divider(ui);
+            row(ui, "録画対象", LABEL_W, |ui| {
+                seg(ui, &mut self.cfg.capture_mode, &[(CaptureMode::Screen, "画面全体"), (CaptureMode::GamesOnly, "ゲームのみ")]);
+            });
+            hint(
+                ui,
+                LABEL_W + 8.0,
+                if self.cfg.capture_mode == CaptureMode::GamesOnly {
+                    "フルスクリーンのゲームだけを、そのモニターで録画します。最小化したり他のウィンドウで隠したりすると、その部分は黒くなりデスクトップは映りません。"
+                } else {
+                    "ゲームがあるモニター（ゲームがない場合はアクティブウィンドウのモニター）に表示されているものすべてを録画します。ゲーム、デスクトップ、その他のウィンドウが含まれます。"
+                },
+            );
+            divider(ui);
+            row(ui, "メモリ", LABEL_W, |ui| {
+                ui.label(RichText::new(format!("録画中は約 {} MB の RAM", self.cfg.typical_ram_mb())).family(bold()).color(TEXT));
+            });
+            hint(ui, LABEL_W + 8.0, "タスクマネージャーの表示に近い概算です。クリップが長い、画質が高い、画面の動きが多いと少し増えます。");
+            divider(ui);
+            row(ui, "フォルダ", LABEL_W, |ui| {
+                ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+                    if button(ui, "変更", Kind::Secondary).clicked() {
+                        if let Some(p) = rfd::FileDialog::new()
+                            .set_title("クリップの保存先")
+                            .set_directory(&self.cfg.output_dir)
+                            .pick_folder()
+                        {
+                            self.cfg.output_dir = p;
+                        }
+                    }
+                    let path = self.cfg.output_dir.display().to_string();
+                    ui.with_layout(Layout::left_to_right(Align::Center), |ui| {
+                        ui.add(egui::Label::new(RichText::new(&path).color(MUTED)).truncate()).on_hover_text(path);
+                    });
+                });
+            });
+        });
+    }
+
+    pub(super) fn global_keys_section(&mut self, ui: &mut egui::Ui) {
+        card(ui, |ui| {
+            for a in GlobalAction::ALL {
+                // Guardar clip siempre tiene tecla; los demás se pueden quitar.
+                let optional = a != GlobalAction::SaveClip;
+                if optional {
+                    divider(ui);
+                }
+                row(ui, a.label(), LABEL_W + 40.0, |ui| {
+                    let (vk, mods) = self.cfg.hotkey(a);
+                    let capturing = self.capturing == Some(a);
+                    ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+                        if optional && vk != 0 && !capturing && button(ui, "削除", Kind::Ghost).clicked() {
+                            let (v, m) = self.cfg.hotkey_mut(a);
+                            *v = 0;
+                            *m = 0;
+                        }
+                        let text = if capturing {
+                            "キーを押してください…".to_string()
+                        } else if vk == 0 {
+                            "未割り当て".to_string()
+                        } else {
+                            hotkey_name(vk, mods)
+                        };
+                        let kind = if capturing { Kind::Selected } else { Kind::Secondary };
+                        let w = ui.available_width();
+                        if button_sized(ui, &text, kind, egui::vec2(w, 34.0)).clicked() {
+                            self.start_capture(a);
+                        }
+                    });
+                });
+            }
+            let note = if self.capturing.is_some() {
+                CAPTURE_HINT.to_string()
+            } else if let Some(n) = &self.global_note {
+                n.clone()
+            } else {
+                "エディタのショートカットは、エディタ内の「エディタの設定」（歯車アイコン）から変更できます。".to_string()
+            };
+            ui.label(RichText::new(note).size(12.5).color(MUTED));
+        });
+    }
+
+    fn audio_section(&mut self, ui: &mut egui::Ui) {
+        section(ui, "オーディオ", |ui| {
+            volume_row(ui, "ゲーム", &mut self.cfg.game_audio, &mut self.cfg.game_volume);
+            hint(
+                ui,
+                LABEL_W + 8.0,
+                if self.cfg.game_audio {
+                    "フルスクリーンのゲームを自動検出します。ゲームがない間はすべてデスクトップに入ります。"
+                } else {
+                    "ミュート: ゲームの音声はクリップに入りません。"
+                },
+            );
+            divider(ui);
+            volume_row(ui, "デスクトップ", &mut self.cfg.desktop_audio, &mut self.cfg.desktop_volume);
+            if self.cfg.desktop_audio {
+                row(ui, "", LABEL_W, |ui| {
+                    ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+                        if button(ui, "更新", Kind::Secondary).on_hover_text("接続されている出力デバイスを検索").clicked() {
+                            self.renders = audio::render_devices();
+                        }
+                        let current = if self.cfg.desktop_device.is_empty() {
+                            "Windowsの既定".to_string()
+                        } else {
+                            self.renders.iter().find(|(id, _)| *id == self.cfg.desktop_device).map(|(_, n)| n.clone()).unwrap_or_else(|| "デバイスが見つかりません".into())
+                        };
+                        let w = ui.available_width();
+                        egui::ComboBox::from_id_salt("desktop_dev")
+                            .width(w - 8.0)
+                            .truncate()
+                            .selected_text(current.clone())
+                            .show_ui(ui, |ui| {
+                                ui.selectable_value(&mut self.cfg.desktop_device, String::new(), "Windowsの既定");
+                                for (id, name) in self.renders.clone() {
+                                    ui.selectable_value(&mut self.cfg.desktop_device, id, name);
+                                }
+                            })
+                            .response
+                            .on_hover_text(current);
+                    });
+                });
+            }
+            hint(ui, LABEL_W + 8.0, if self.cfg.desktop_device.is_empty() { "その他すべて: Discord、音楽、ブラウザなど。" } else { "選択した出力デバイスの音声のみを録音します（MixAmpなどで分離した場合に便利）。" });
+            divider(ui);
+            row(ui, "マイク", LABEL_W, |ui| {
+                toggle(ui, &mut self.cfg.mic_audio).on_hover_text(if self.cfg.mic_audio { "マイクをオフ" } else { "自分の声を録音" });
+                ui.add_space(8.0);
+                ui.add_enabled_ui(self.cfg.mic_audio, |ui| {
+                    ui.spacing_mut().slider_width = (ui.available_width() - 86.0).max(60.0);
+                    ui.add(egui::Slider::new(&mut self.cfg.mic_volume, 0..=200).suffix(" %"));
+                });
+            });
+            if self.cfg.mic_audio {
+                row(ui, "", LABEL_W, |ui| {
+                    ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+                        if button(ui, "更新", Kind::Secondary).on_hover_text("接続されているマイクを検索").clicked() {
+                            self.mics = audio::capture_devices();
+                        }
+                        let current = if self.cfg.mic_device.is_empty() {
+                            "Windowsの既定".to_string()
+                        } else {
+                            self.mics.iter().find(|(id, _)| *id == self.cfg.mic_device).map(|(_, n)| n.clone()).unwrap_or_else(|| "マイクが接続されていません".into())
+                        };
+                        let w = ui.available_width();
+                        egui::ComboBox::from_id_salt("mic")
+                            .width(w - 8.0)
+                            .truncate()
+                            .selected_text(current.clone())
+                            .show_ui(ui, |ui| {
+                                ui.selectable_value(&mut self.cfg.mic_device, String::new(), "Windowsの既定");
+                                for (id, name) in self.mics.clone() {
+                                    ui.selectable_value(&mut self.cfg.mic_device, id, name);
+                                }
+                            })
+                            .response
+                            .on_hover_text(current);
+                    });
+                });
+            }
+            hint(
+                ui,
+                LABEL_W + 8.0,
+                if self.cfg.mic_audio { "自分の声がクリップにミックスされます。トレイアイコンからもオン/オフできます。" } else { "オフ: 自分の声はクリップに入りません。" },
+            );
+
+        });
+    }
+
+    pub(super) fn general_section(&mut self, ui: &mut egui::Ui) {
+        section(ui, "基本設定", |ui| {
+            row(ui, "保存時のサウンド", LABEL_W, |ui| {
+                ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+                    toggle(ui, &mut self.cfg.sound_on_save);
+                    if button(ui, "サウンドを試す", Kind::Secondary).clicked() {
+                        sound::play_saved();
+                    }
+                });
+            });
+            divider(ui);
+            row(ui, "Windows起動時に開始", LABEL_W, |ui| {
+                ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+                    let mut a = self.autostart;
+                    if toggle(ui, &mut a).changed() {
+                        autostart::set(a);
+                        self.autostart = autostart::enabled();
+                    }
+                });
+            });
+        });
+    }
+}
+
+/// Fila de audio: interruptor + volumen + porcentaje.
+fn volume_row(ui: &mut egui::Ui, label: &str, on: &mut bool, vol: &mut u32) {
+    row(ui, label, LABEL_W, |ui| {
+        toggle(ui, on).on_hover_text(if *on { "ミュート" } else { "オン" });
+        ui.add_space(8.0);
+        ui.add_enabled_ui(*on, |ui| {
+            ui.spacing_mut().slider_width = (ui.available_width() - 86.0).max(60.0);
+            ui.add(egui::Slider::new(vol, 0..=100).suffix(" %"));
+        });
+    });
+}
+
+fn ago(t: SystemTime) -> String {
+    let s = SystemTime::now().duration_since(t).map(|d| d.as_secs()).unwrap_or(0);
+    let hace = |n: u64, one: &str, many: &str| format!("hace {n} {}", if n == 1 { one } else { many });
+    match s {
+        0..=59 => "hace un momento".into(),
+        60..=3599 => format!("hace {} min", s / 60),
+        3600..=86_399 => format!("hace {} h", s / 3600),
+        86_400..=172_799 => "ayer".into(),
+        172_800..=604_799 => hace(s / 86_400, "día", "días"),
+        604_800..=2_591_999 => hace(s / 604_800, "semana", "semanas"),
+        2_592_000..=31_535_999 => hace(s / 2_592_000, "mes", "meses"),
+        _ => hace(s / 31_536_000, "año", "años"),
+    }
+}
